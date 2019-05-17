@@ -1,55 +1,63 @@
-enum state {OFF, AUTO, MAN};
-enum dir {FORWARD, REVERSE};
-
-typedef struct{
-    int leftPin;
-    int rightPin;
-    dir leftDir;
-    dir rightDir;
-    int left;
-    int right;
-    state stat;
-  } control;
-
-control wheels = (control) {2, 3, FORWARD, FORWARD, 0, 0, OFF};
-
-typedef struct {
-    int echoPin;
-    int triggerPin;
-    unsigned long dist;
-  } sensorID;
-
-sensorID one = (sensorID) {13, 12, 0};
-sensorID two = (sensorID) {12, 13, 0};
-sensorID three = (sensorID) {12, 13, 0};
-sensorID four = (sensorID) {12, 13, 0};
-
-
+#include "main.h"
 
 void setup() {
   sensor_setup(one);
-  setMotors(128, 64);
+  sensor_setup(two);
+  sensor_setup(three); 
+  sensor_setup(four);
   Serial.begin(9600);
 }
 
 void loop() {
   setDistance(&one, measure(one));
-  Serial.print("Measured distance: ");
+  setDistance(&two, measure(two));
+  setDistance(&three, measure(three));
+  setDistance(&four, measure(four));
+
+  Serial.print("One Measured distance: ");
   Serial.println((unsigned long)one.dist);
+  Serial.print("Two Measured distance: ");
+  Serial.println((unsigned long)two.dist);
+  Serial.print("Three Measured distance: ");
+  Serial.println((unsigned long)three.dist);
+  Serial.print("Four Measured distance: ");
+  Serial.println((unsigned long)four.dist);
+  Serial.println();
+  
+  updateMove();
+  Serial.print("Present State: ");
+  Serial.println(ns);
+  Serial.print("Next State: ");
+  Serial.println(ns);
+  Serial.println();
+
+  setMotors(MAX_SPEED * (ns & 0x02)>>1, MAX_SPEED * (ns & 0x01));
+    
   Serial.print("Left: ");
   Serial.println(wheels.left);
   Serial.print("Right: ");
   Serial.println(wheels.right);
-
-  delay(100);
+  Serial.println();
+  
+  ps = ns;
+  delay(10);
 }
+
 
 void sensor_setup(sensorID sense) {
   pinMode(sense.echoPin, INPUT);
   pinMode(sense.triggerPin, OUTPUT);
 }
 
-void setDistance(sensorID* sense, unsigned long distance) { sense->dist = distance; }
+void motorSetup() {
+  pinMode(wheels.leftPin, OUTPUT);
+  pinMode(wheels.rightPin, OUTPUT);
+}
+
+void setDistance(sensorID* sense, unsigned long distance) { 
+  sense->dist = distance; 
+  sense-> warn = (distance < 10)? YES : NO;  
+}
 
 unsigned long measure(sensorID sense) {
   // send a trigger pulse of 1ms
@@ -64,15 +72,20 @@ unsigned long measure(sensorID sense) {
 }
 
 void setMotors(int speedL,int speedR) {
-  (&wheels)->left = speedL; 
-  (&wheels)->right = speedR;
+  // ramping 
+  int diffL = speedL - (wheels.left);
+  (&wheels)->left += REPSONSE_FACTOR * diffL;
+  int diffR = speedR - (wheels.right);
+  (&wheels)->right += REPSONSE_FACTOR * diffR;
+  
   analogWrite(wheels.leftPin, wheels.left);
   analogWrite(wheels.rightPin, wheels.right);
 }
 
-void motorSetup() {
-  pinMode(wheels.leftPin, OUTPUT);
-  pinMode(wheels.rightPin, OUTPUT);
+void updateMove() {
+    int nsLeft = !two.warn | four.warn;
+    int nsRight = (!one.warn  & (!four.warn | two.warn)) | (two.warn & (!four.warn | three.warn));
+    ns = nsRight | (nsLeft << 1);         
 }
 
 
