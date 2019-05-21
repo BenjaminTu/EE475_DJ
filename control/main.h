@@ -1,3 +1,5 @@
+#include <Wire.h>
+
 // direction
 #define OFF     0
 #define LEFT    1
@@ -30,7 +32,7 @@
 #define Y_LH          0x6
 #define Y_LH          0x7
 
-// MODEs
+// MODES
 #define SET_MODE      0x8
 #define MODE          0x9
 
@@ -75,6 +77,7 @@
 
 int ps = OFF, ns = OFF;
 unsigned char REG[34] =  {0}; 
+int ACTIVE_INDEX;
 
 typedef struct{
     int leftPin;
