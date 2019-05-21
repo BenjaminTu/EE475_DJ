@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">DJ_APP</string>
+    <string name="button_name">Auto Mode</string>
+    <string name="switch_name">Power</string>
+    <string name="title_name">Welcome to DJ Roomba!</string>
+</resources>
