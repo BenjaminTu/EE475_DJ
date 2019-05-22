@@ -11,8 +11,8 @@
 #define REVERSE -1
 
 // mode
-#define AUTO    0
-#define MAN     1 
+#define AUTO    1
+#define MAN     0 
 
 // warning
 #define YES     1
