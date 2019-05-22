@@ -6,5 +6,7 @@
     <string name="off">Off</string>
     <string name="title_name">Welcome to DJ Roomba !</string>
     <string name="sensorInit"> 0 cm </string>
+    <string name="wheel">wheel </string>
+
 
 </resources>

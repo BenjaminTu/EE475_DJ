@@ -6,6 +6,12 @@ import android.util.Log;
 import android.widget.CompoundButton;
 import android.widget.ToggleButton;
 import android.widget.TextView;
+import android.widget.ImageView;
+import android.media.MediaPlayer;
+import android.graphics.Bitmap;
+import android.graphics.drawable.*;
+import android.graphics.Matrix;
+import android.graphics.BitmapFactory;
 import android.bluetooth.*;
 import android.content.Intent;
 import java.util.*;
@@ -43,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
         // Toggle Button
         final ToggleButton power = (ToggleButton) findViewById(R.id.powerButton);
         final ToggleButton mode = (ToggleButton) findViewById(R.id.modeButton);
@@ -51,14 +56,35 @@ public class MainActivity extends AppCompatActivity {
         // Joysticks
         final JoystickView joystick = (JoystickView) findViewById(R.id.joystickView);
 
-        //Sensor Values
+        // Sensor Values
         final TextView sensor1 = (TextView) findViewById(R.id.sensor1);
         final TextView sensor2 = (TextView) findViewById(R.id.sensor2);
         final TextView sensor3 = (TextView) findViewById(R.id.sensor3);
         final TextView sensor4 = (TextView) findViewById(R.id.sensor4);
 
-        //Toggle Button Controls
+        // Motor Bar
+        final ImageView wheel1 = (ImageView) findViewById(R.id.wheel1);
+        final ImageView wheel2 = (ImageView) findViewById(R.id.wheel2);
+        // Initial Progress Bar Bitmap
+        final Bitmap bitmapOrg = ((BitmapDrawable)wheel1.getDrawable()).getBitmap();
+        final Drawable barOrg = (Drawable) wheel1.getDrawable();
 
+
+        // Start up music
+        final MediaPlayer mp = MediaPlayer.create(this, R.raw.startup);
+        mp.start();
+        mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                mp.release();
+            }
+        });
+
+        // Wheels Control
+        setMotor(barOrg, wheel1, 20);
+
+
+        // Toggle Button Controls
         power.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -115,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
         }
         */
     }
-     void changeText(TextView tv, int value) {
+     private void changeText(TextView tv, int value) {
         tv.setText(Integer.toString(value)+" cm");
         if (value < 10) {
             tv.setTextColor(getResources().getColor(R.color.warning));
@@ -124,5 +150,11 @@ public class MainActivity extends AppCompatActivity {
         } else {
             tv.setTextColor(getResources().getColor(R.color.normal));
         }
+    }
+
+    private void setMotor(Drawable barOrg, ImageView iv, int percentage) {
+
+
+        //iv.setImageDrawable();
     }
 }
