@@ -2,7 +2,8 @@ package com.example.dj_app;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ToggleButton;
 import android.widget.TextView;
@@ -10,10 +11,14 @@ import android.widget.ImageView;
 import android.media.MediaPlayer;
 import android.graphics.Bitmap;
 import android.graphics.drawable.*;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.graphics.Matrix;
 import android.graphics.BitmapFactory;
 import android.bluetooth.*;
 import android.content.Intent;
+
+import java.math.BigInteger;
 import java.util.*;
 
 import io.github.controlwear.virtual.joystick.android.JoystickView;
@@ -43,7 +48,6 @@ public class MainActivity extends AppCompatActivity {
     private static int setMode = MAN;
     private static int state = OFF;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,10 +69,12 @@ public class MainActivity extends AppCompatActivity {
         // Motor Bar
         final ImageView wheel1 = (ImageView) findViewById(R.id.wheel1);
         final ImageView wheel2 = (ImageView) findViewById(R.id.wheel2);
+
         // Initial Progress Bar Bitmap
         final Bitmap bitmapOrg = ((BitmapDrawable)wheel1.getDrawable()).getBitmap();
-        final Drawable barOrg = (Drawable) wheel1.getDrawable();
 
+        // Connect Button
+        final Button connect = (Button) findViewById(R.id.bt);
 
         // Start up music
         final MediaPlayer mp = MediaPlayer.create(this, R.raw.startup);
@@ -80,8 +86,42 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Wheels Control
-        setMotor(barOrg, wheel1, 20);
+
+        // Wheels Init
+        setMotor(bitmapOrg, wheel1, 0);
+        setMotor(bitmapOrg, wheel2, 0);
+
+        connect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(true/*blue tooth is connected*/) {
+                    AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                    alertDialog.setTitle("Alert");
+                    alertDialog.setMessage(getResources().getString(R.string.success));
+                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            });
+                    alertDialog.show();
+
+                } else {
+                    // if not connected
+                    AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                    alertDialog.setTitle("Alert");
+                    alertDialog.setMessage(getResources().getString(R.string.fail));
+                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            });
+                    alertDialog.show();
+
+                }
+            }
+        });
 
 
         // Toggle Button Controls
@@ -106,8 +146,6 @@ public class MainActivity extends AppCompatActivity {
             public void onMove(int angle, int strength) {
                 joystickVal[X] = (int) (strength * Math.cos(Math.toRadians(angle)));
                 joystickVal[Y] = (int) (strength * Math.sin(Math.toRadians(angle)));
-                Log.d("X",Integer.toString(joystickVal[X]));
-                Log.d("Y",Integer.toString(joystickVal[Y]));
             }
         });
 
@@ -138,8 +176,8 @@ public class MainActivity extends AppCompatActivity {
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
             }
-        }
-        */
+        }*/
+
     }
      private void changeText(TextView tv, int value) {
         tv.setText(Integer.toString(value)+" cm");
@@ -152,9 +190,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setMotor(Drawable barOrg, ImageView iv, int percentage) {
+    private void setMotor(Bitmap bitmapOrg, ImageView iv, int percentage) {
 
+        int newHeight = (int)(bitmapOrg.getHeight() * percentage / 100.0);
+        int startingY = (int)(bitmapOrg.getHeight() * (1.0f - (percentage/100.0)));
 
-        //iv.setImageDrawable();
+        if (newHeight <= 0) {
+            newHeight = 1;
+            startingY = 0;
+        } else if (newHeight >= bitmapOrg.getHeight()) {
+            newHeight = bitmapOrg.getHeight();
+            startingY = 0;
+        }
+
+        Bitmap croppedBitmap = Bitmap.createBitmap(bitmapOrg, 0, startingY, bitmapOrg.getWidth(), newHeight);
+        iv.setImageBitmap(croppedBitmap);
     }
 }

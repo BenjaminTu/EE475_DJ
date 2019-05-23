@@ -1,12 +1,17 @@
 <resources>
-    <string name="app_name">DJ_APP</string>
+    <string name="app_name">DJ Roomba</string>
     <string name="auto">Auto</string>
     <string name="man">Manual</string>
     <string name="on">On</string>
     <string name="off">Off</string>
-    <string name="title_name">Welcome to DJ Roomba !</string>
+    <string name="title_name">Controller:(</string>
     <string name="sensorInit"> 0 cm </string>
     <string name="wheel">wheel </string>
+    <string name="connect">Connect ! </string>
+    <string name="fail">Bluetooth Connection Failed </string>
+    <string name="success">Device Connected </string>
+
+
 
 
 </resources>
