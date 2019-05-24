@@ -67,10 +67,10 @@
 #define WHEEL1_LL     0x1D
 
 // WHEEL 2
-#define WHEEL2_HH     0x1F
-#define WHEEL2_HL     0x20
-#define WHEEL2_LH     0x21
-#define WHEEL2_LL     0x22
+#define WHEEL2_HH     0x1E
+#define WHEEL2_HL     0x1F
+#define WHEEL2_LH     0x20
+#define WHEEL2_LL     0x21
 
 #define REPSONSE_FACTOR 0.25
 #define MAX_SPEED 128
