@@ -8,7 +8,7 @@ void setup() {
   Serial.begin(9600);
 
 
-  Wire.begin(8);                // join i2c bus with address #8
+  Wire.begin(0x62);                // join i2c bus with address #62
   Wire.onReceive(receiveEvent); // register event / Slave Reader
   Wire.onRequest(requestEvent); // register event / Slave Writer
 
@@ -17,10 +17,11 @@ void setup() {
 void loop() {
 
   noInterrupts(); // disable interrupts while measuring
+  /*
   setDistance(&one, measure(one));
   setDistance(&two, measure(two));
   setDistance(&three, measure(three));
-  setDistance(&four, measure(four));
+  setDistance(&four, measure(four));*/
   interrupts(); // re-enable interrupts
 
   Serial.print("One Measured distance: ");

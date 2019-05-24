@@ -1,5 +1,7 @@
 package com.example.dj_app;
 
+import android.net.MacAddress;
+import android.os.ParcelUuid;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -13,10 +15,16 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.*;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.graphics.Matrix;
-import android.graphics.BitmapFactory;
+import android.content.IntentFilter;
 import android.bluetooth.*;
-import android.content.Intent;
+import android.content.*;
+import android.os.Message;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
+
 
 import java.math.BigInteger;
 import java.util.*;
@@ -35,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int WHEEL1 = 4;
     private static final int WHEEL2 = 5;
 
-    private static int[] joystickVal = new int [2];
+    private static int[] joystickVal = new int[2];
     private static final int X = 0;
     private static final int Y = 1;
 
@@ -47,6 +55,13 @@ public class MainActivity extends AppCompatActivity {
 
     private static int setMode = MAN;
     private static int state = OFF;
+    private static String DEVICE_ADDR = "3c:15:c2:da:a4:0f";
+    //private static String DEVICE_ADDR = "B8:27:EB:0B:DE:D9";
+
+    BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    BluetoothDevice bluetoothDevice; // should be Pi
+    OutputStream btOutputStream;
+    InputStream btInputStream;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
         final ImageView wheel2 = (ImageView) findViewById(R.id.wheel2);
 
         // Initial Progress Bar Bitmap
-        final Bitmap bitmapOrg = ((BitmapDrawable)wheel1.getDrawable()).getBitmap();
+        final Bitmap bitmapOrg = ((BitmapDrawable) wheel1.getDrawable()).getBitmap();
 
         // Connect Button
         final Button connect = (Button) findViewById(R.id.bt);
@@ -94,31 +109,26 @@ public class MainActivity extends AppCompatActivity {
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(true/*blue tooth is connected*/) {
+
+                makeDiscoverable();
+                boolean found = startSearching();
+                try {
+                    btOutputStream.write(0x65);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (found) {
+                    // Dialog box
                     AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
                     alertDialog.setTitle("Alert");
                     alertDialog.setMessage(getResources().getString(R.string.success));
-                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                    alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
                                     dialog.dismiss();
                                 }
                             });
                     alertDialog.show();
-
-                } else {
-                    // if not connected
-                    AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-                    alertDialog.setTitle("Alert");
-                    alertDialog.setMessage(getResources().getString(R.string.fail));
-                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
-                            new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                            });
-                    alertDialog.show();
-
                 }
             }
         });
@@ -128,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         power.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                state = isChecked? ON:OFF;
+                state = isChecked ? ON : OFF;
                 mode.setEnabled(isChecked);
             }
         });
@@ -136,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
         mode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                setMode = isChecked? AUTO:MAN;
+                setMode = isChecked ? AUTO : MAN;
             }
         });
 
@@ -157,30 +167,11 @@ public class MainActivity extends AppCompatActivity {
          */
 
         // Bluetooth controls
-        /*
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter == null) {
-            // Device doesn't support Bluetooth
-        }
-
-        if (!bluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        }
-
-        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
-
-        if (pairedDevices.size() > 0) {
-            // There are paired devices. Get the name and address of each paired device.
-            for (BluetoothDevice device : pairedDevices) {
-                String deviceName = device.getName();
-                String deviceHardwareAddress = device.getAddress(); // MAC address
-            }
-        }*/
 
     }
-     private void changeText(TextView tv, int value) {
-        tv.setText(Integer.toString(value)+" cm");
+
+    private void changeText(TextView tv, int value) {
+        tv.setText(Integer.toString(value) + " cm");
         if (value < 10) {
             tv.setTextColor(getResources().getColor(R.color.warning));
         } else if (value < 17) {
@@ -192,8 +183,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void setMotor(Bitmap bitmapOrg, ImageView iv, int percentage) {
 
-        int newHeight = (int)(bitmapOrg.getHeight() * percentage / 100.0);
-        int startingY = (int)(bitmapOrg.getHeight() * (1.0f - (percentage/100.0)));
+        int newHeight = (int) (bitmapOrg.getHeight() * percentage / 100.0);
+        int startingY = (int) (bitmapOrg.getHeight() * (1.0f - (percentage / 100.0)));
 
         if (newHeight <= 0) {
             newHeight = 1;
@@ -206,4 +197,65 @@ public class MainActivity extends AppCompatActivity {
         Bitmap croppedBitmap = Bitmap.createBitmap(bitmapOrg, 0, startingY, bitmapOrg.getWidth(), newHeight);
         iv.setImageBitmap(croppedBitmap);
     }
+
+    private void makeDiscoverable() {
+        Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+        startActivity(discoverableIntent);
+    }
+
+    private BroadcastReceiver myReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Message msg = Message.obtain();
+            String action = intent.getAction();
+            if(BluetoothDevice.ACTION_FOUND.equals(action)){
+                //Found, add to a device list
+            }
+        }
+    };
+
+    private boolean startSearching() {
+        Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
+        for (BluetoothDevice dev : devices) {
+            if (dev.getAddress().toUpperCase().equals(DEVICE_ADDR.toUpperCase())) {
+                bluetoothDevice = dev;
+                ParcelUuid[] uuids = dev.getUuids();
+                BluetoothSocket socket = null;
+                try {
+                    socket = dev.createRfcommSocketToServiceRecord(uuids[0].getUuid());
+                    socket.connect();
+                    btInputStream = socket.getInputStream();
+                    btOutputStream = socket.getOutputStream();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    break;
+                }
+                return true;
+            }
+        }
+        // Then device not found
+        // Dialog box
+        AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+        alertDialog.setTitle("Alert");
+        alertDialog.setMessage("DJ Roomba Not Found");
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        alertDialog.show();
+        return false;
+    }
+
+    public boolean createBond(BluetoothDevice btDevice)
+            throws Exception
+    {
+        Class class1 = Class.forName("android.bluetooth.BluetoothDevice");
+        Method createBondMethod = class1.getMethod("createBond");
+        Boolean returnValue = (Boolean) createBondMethod.invoke(btDevice);
+        return returnValue.booleanValue();
+    }
 }
+

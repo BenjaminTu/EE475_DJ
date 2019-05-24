@@ -8,7 +8,6 @@
     <string name="sensorInit"> 0 cm </string>
     <string name="wheel">wheel </string>
     <string name="connect">Connect ! </string>
-    <string name="fail">Bluetooth Connection Failed </string>
     <string name="success">Device Connected </string>
 
 
