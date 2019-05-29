@@ -18,15 +18,12 @@ import android.content.DialogInterface;
 import android.content.IntentFilter;
 import android.bluetooth.*;
 import android.content.*;
-import android.os.Message;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Method;
 
 
-import java.math.BigInteger;
 import java.util.*;
 
 import io.github.controlwear.virtual.joystick.android.JoystickView;
@@ -55,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static int setMode = MAN;
     private static int state = OFF;
-    private static String DEVICE_ADDR = "3c:15:c2:da:a4:0f";
-    //private static String DEVICE_ADDR = "B8:27:EB:0B:DE:D9";
+    //private static String \DEVICE_ADDR = "3c:15:c2:da:a4:0f";
+    private static String DEVICE_ADDR = "B8:27:EB:0B:DE:D9";
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     BluetoothDevice bluetoothDevice; // should be Pi
@@ -112,16 +109,19 @@ public class MainActivity extends AppCompatActivity {
 
                 makeDiscoverable();
                 boolean found = startSearching();
+                /*
                 try {
                     btOutputStream.write(0x65);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                */
                 if (found) {
                     // Dialog box
                     AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
                     alertDialog.setTitle("Alert");
-                    alertDialog.setMessage(getResources().getString(R.string.success));
+                    alertDialog.setMessage(bluetoothDevice.getAddress());
+                    //alertDialog.setMessage(getResources().getString(R.string.success));
                     alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
                             new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
@@ -204,22 +204,12 @@ public class MainActivity extends AppCompatActivity {
         startActivity(discoverableIntent);
     }
 
-    private BroadcastReceiver myReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Message msg = Message.obtain();
-            String action = intent.getAction();
-            if(BluetoothDevice.ACTION_FOUND.equals(action)){
-                //Found, add to a device list
-            }
-        }
-    };
-
     private boolean startSearching() {
         Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
         for (BluetoothDevice dev : devices) {
             if (dev.getAddress().toUpperCase().equals(DEVICE_ADDR.toUpperCase())) {
                 bluetoothDevice = dev;
+                /*
                 ParcelUuid[] uuids = dev.getUuids();
                 BluetoothSocket socket = null;
                 try {
@@ -227,10 +217,11 @@ public class MainActivity extends AppCompatActivity {
                     socket.connect();
                     btInputStream = socket.getInputStream();
                     btOutputStream = socket.getOutputStream();
+
                 } catch (IOException e) {
                     e.printStackTrace();
                     break;
-                }
+                }*/
                 return true;
             }
         }
@@ -247,15 +238,6 @@ public class MainActivity extends AppCompatActivity {
                 });
         alertDialog.show();
         return false;
-    }
-
-    public boolean createBond(BluetoothDevice btDevice)
-            throws Exception
-    {
-        Class class1 = Class.forName("android.bluetooth.BluetoothDevice");
-        Method createBondMethod = class1.getMethod("createBond");
-        Boolean returnValue = (Boolean) createBondMethod.invoke(btDevice);
-        return returnValue.booleanValue();
     }
 }
 

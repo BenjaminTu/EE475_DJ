@@ -30,7 +30,7 @@
 #define Y_HH          0x4
 #define Y_HL          0x5
 #define Y_LH          0x6
-#define Y_LH          0x7
+#define Y_LL          0x7
 
 // MODES
 #define SET_MODE      0x8
