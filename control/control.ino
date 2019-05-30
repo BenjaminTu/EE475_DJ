@@ -126,13 +126,14 @@ void receiveEvent(int howMany) {
   if (Wire.available() >= 1) { // loop through all but the last
     int index = Wire.read();
     ACTIVE_INDEX = index;
-    while (Wire.available() > 1) {
+    while (Wire.available() > 0) {
       char data = Wire.read(); // receive byte as a character
-      // receive if index < 0x9
-      if (ACTIVE_INDEX < 0x9) {
         REG[ACTIVE_INDEX] = data; 
+        Serial.print("Set: ");
+        Serial.print(ACTIVE_INDEX);
+        Serial.print(" to ");
+        Serial.println(REG[ACTIVE_INDEX], HEX);
         ACTIVE_INDEX ++;
-      }
     }
     ACTIVE_INDEX = index;
   }
@@ -141,18 +142,11 @@ void receiveEvent(int howMany) {
 // function that executes whenever data is requested by master
 // this function is registered as an event, see setup()
 void requestEvent() {
-  REG[0xA] = 0x12;
-  REG[0xB] = 0x12;
-  REG[0xC] = 0x12;
-  REG[0xD] = 0x12;
-  REG[0x9] = 0x56;
   
   // write if index >= 0x9
   if (ACTIVE_INDEX > 0x9) {
-    long data = (REG[ACTIVE_INDEX] << 24) | (REG[ACTIVE_INDEX+1] << 16) | 
-      (REG[ACTIVE_INDEX+2] << 8) | (REG[ACTIVE_INDEX+3]); // concatenating data
-    Wire.write(data); 
-    Serial.print(data, HEX);
+    unsigned char arr [4] = {REG[ACTIVE_INDEX], REG[ACTIVE_INDEX+1], REG[ACTIVE_INDEX+2], REG[ACTIVE_INDEX+3]};
+    Wire.write(arr, 4); 
   } else if (ACTIVE_INDEX == 0x9) {
     Wire.write(REG[MODE]);
   }
