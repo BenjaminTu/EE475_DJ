@@ -1,7 +1,5 @@
 package com.example.dj_app;
 
-import android.net.MacAddress;
-import android.os.ParcelUuid;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -13,11 +11,7 @@ import android.widget.ImageView;
 import android.media.MediaPlayer;
 import android.graphics.Bitmap;
 import android.graphics.drawable.*;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.IntentFilter;
 import android.bluetooth.*;
-import android.content.*;
 import android.os.*;
 
 import java.io.IOException;
@@ -32,12 +26,8 @@ import io.github.controlwear.virtual.joystick.android.JoystickView;
 public class MainActivity extends AppCompatActivity {
 
     private static int[] display = new int[6];
-    private static final int SENSOR1 = 0;
-    private static final int SENSOR2 = 1;
-    private static final int SENSOR3 = 2;
-    private static final int SENSOR4 = 3;
-    private static final int WHEEL1 = 4;
-    private static final int WHEEL2 = 5;
+    private static ArrayList<String> INDICES =
+            new ArrayList<>(Arrays.asList(new String [] {"SENSOR1", "SENSOR2", "SENSOR3", "SENSOR4", "WHEEL1", "WHEEL2"}));
 
     private static int[] joystickVal = new int[2];
     private static final int X = 0;
@@ -54,14 +44,20 @@ public class MainActivity extends AppCompatActivity {
     private static String DEVICE_ADDR = "B8:27:EB:0B:DE:D9";
     private static final UUID SerialPortServiceClass_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
-    private Handler mHandler; // Our main handler that will receive callback notifications
     private ConnectedThread mConnectedThread; // bluetooth background worker thread to send and receive data
     private BluetoothSocket mBTSocket = null; // bi-directional client-to-client data path
 
-    // #defines for identifying shared types between calling functions
-    private final static int REQUEST_ENABLE_BT = 1; // used to identify adding bluetooth names
-    private final static int MESSAGE_READ = 2; // used in bluetooth handler to identify message update
-    private final static int CONNECTING_STATUS = 3; // used in bluetooth handler to identify message status
+    // Sensor Values
+    private static TextView sensor1;
+    private static TextView sensor2;
+    private static TextView sensor3;
+    private static TextView sensor4;
+
+    // Motor Bar
+    private static ImageView wheel1;
+    private static ImageView wheel2;
+    private static Bitmap bitmapOrg;
+
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -78,17 +74,17 @@ public class MainActivity extends AppCompatActivity {
         final JoystickView joystick = (JoystickView) findViewById(R.id.joystickView);
 
         // Sensor Values
-        final TextView sensor1 = (TextView) findViewById(R.id.sensor1);
-        final TextView sensor2 = (TextView) findViewById(R.id.sensor2);
-        final TextView sensor3 = (TextView) findViewById(R.id.sensor3);
-        final TextView sensor4 = (TextView) findViewById(R.id.sensor4);
+        sensor1 = (TextView) findViewById(R.id.sensor1);
+        sensor2 = (TextView) findViewById(R.id.sensor2);
+        sensor3 = (TextView) findViewById(R.id.sensor3);
+        sensor4 = (TextView) findViewById(R.id.sensor4);
 
         // Motor Bar
-        final ImageView wheel1 = (ImageView) findViewById(R.id.wheel1);
-        final ImageView wheel2 = (ImageView) findViewById(R.id.wheel2);
+        wheel1 = (ImageView) findViewById(R.id.wheel1);
+        wheel2 = (ImageView) findViewById(R.id.wheel2);
 
         // Initial Progress Bar Bitmap
-        final Bitmap bitmapOrg = ((BitmapDrawable) wheel1.getDrawable()).getBitmap();
+        bitmapOrg = ((BitmapDrawable) wheel1.getDrawable()).getBitmap();
 
         // Connect Button
         final Button connect = (Button) findViewById(R.id.bt);
@@ -117,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
                 new Thread()
                 {
                     public void run() {
+                        Looper.prepare();
                         boolean fail = false;
 
                         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(DEVICE_ADDR.toUpperCase());
@@ -126,33 +123,12 @@ public class MainActivity extends AppCompatActivity {
                             mBTSocket = device.createRfcommSocketToServiceRecord(SerialPortServiceClass_UUID);
                             mBTSocket.connect();
                         } catch (IOException e) {
-                            try {
-                                fail = true;
-                                mBTSocket.close();
-                                mHandler.obtainMessage(CONNECTING_STATUS, -1, -1)
-                                        .sendToTarget();
-                            } catch (IOException e2) {
-                                //insert code to deal with this
-                            }
+                            e.printStackTrace();
                         }
                         if(fail == false) {
-                            // Dialog box
-                            AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-                            alertDialog.setTitle("Alert");
-                            alertDialog.setMessage(getResources().getString(R.string.success));
-                            alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
-                                    new DialogInterface.OnClickListener() {
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            dialog.dismiss();
-                                        }
-                                    });
-                            alertDialog.show();
 
                             mConnectedThread = new ConnectedThread(mBTSocket);
                             mConnectedThread.start();
-
-                            mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "pi")
-                                    .sendToTarget();
                         }
                     }
                 }.start();
@@ -182,10 +158,9 @@ public class MainActivity extends AppCompatActivity {
             public void onMove(int angle, int strength) {
                 joystickVal[X] = (int) (strength * Math.cos(Math.toRadians(angle)));
                 joystickVal[Y] = (int) (strength * Math.sin(Math.toRadians(angle)));
-                /* update joystick values;
-                * write ()
-                *
-                */
+                // update joystick values
+                mConnectedThread.write ("X " + joystickVal[X]);
+                mConnectedThread.write ("Y " + joystickVal[Y]);
             }
         });
 
@@ -241,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public void run() {
-            byte[] buffer = new byte[1024];  // buffer store for the stream
+            Looper.prepare();
             int bytes; // bytes returned from read()
             // Keep listening to the InputStream until an exception occurs
             while (true) {
@@ -249,24 +224,24 @@ public class MainActivity extends AppCompatActivity {
                     // Read from the InputStream
                     bytes = mmInStream.available();
                     if(bytes != 0) {
-                        SystemClock.sleep(100); //pause and wait for rest of data. Adjust this depending on your sending speed.
+                        SystemClock.sleep(1); //pause and wait for rest of data. Adjust this depending on your sending speed.
                         bytes = mmInStream.available(); // how many bytes are ready to be read?
+                        byte[] buffer = new byte[bytes];  // buffer store for the stream
                         bytes = mmInStream.read(buffer, 0, bytes); // record how many bytes we actually read
+                        int end = new String(buffer).indexOf(0); // end at null;
+                        String[] data = new String(buffer).substring(0,end).split("\\s+");
+                        display[INDICES.indexOf(data[0].toUpperCase())] = Integer.parseInt(data[1]);
 
-                        /*
-                            changeText(sensor1, SENSOR1);
-                            changeText(sensor2, SENSOR2);
-                            changeText(sensor3, SENSOR3);
-                            changeText(sensor4, SENSOR4);
-                            setMotor(bitmapOrg, wheel1, data);
-                            setMotor(bitmapOrg, wheel2, data);
-                         */
-                        mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-                                .sendToTarget(); // Send the obtained bytes to the UI activity
+                        changeText(sensor1, display[0]);
+                        changeText(sensor2, display[1]);
+                        changeText(sensor3, display[2]);
+                        changeText(sensor4, display[3]);
+                        setMotor(bitmapOrg, wheel1, display[4]);
+                        setMotor(bitmapOrg, wheel2, display[5]);
+
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-
                     break;
                 }
             }
