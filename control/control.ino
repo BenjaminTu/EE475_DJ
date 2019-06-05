@@ -142,7 +142,8 @@ void receiveEvent(int howMany) {
 // function that executes whenever data is requested by master
 // this function is registered as an event, see setup()
 void requestEvent() {
-  
+  REG[SENSOR1_HH] = 0x34;
+
   // write if index >= 0x9
   if (ACTIVE_INDEX > 0x9) {
     unsigned char arr [4] = {REG[ACTIVE_INDEX], REG[ACTIVE_INDEX+1], REG[ACTIVE_INDEX+2], REG[ACTIVE_INDEX+3]};

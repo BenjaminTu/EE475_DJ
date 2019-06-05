@@ -1,7 +1,6 @@
 #include <Wire.h>
 
 // direction
-#define OFF     0
 #define LEFT    1
 #define RIGHT   2
 #define FRONT   3
@@ -11,6 +10,7 @@
 #define REVERSE -1
 
 // mode
+#define OFF     2
 #define AUTO    1
 #define MAN     0 
 

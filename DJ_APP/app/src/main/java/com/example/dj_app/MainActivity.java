@@ -2,6 +2,7 @@ package com.example.dj_app;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -10,6 +11,7 @@ import android.widget.TextView;
 import android.widget.ImageView;
 import android.media.MediaPlayer;
 import android.graphics.Bitmap;
+import android.widget.Toast;
 import android.graphics.drawable.*;
 import android.bluetooth.*;
 import android.os.*;
@@ -34,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int Y = 1;
 
     private static final int ON = 1;
-    private static final int OFF = 0;
+    private static final int OFF = 2;
 
     private static final int AUTO = 1;
     private static final int MAN = 0;
@@ -58,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private static ImageView wheel2;
     private static Bitmap bitmapOrg;
 
+    private static Toast toast;
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -89,6 +92,10 @@ public class MainActivity extends AppCompatActivity {
         // Connect Button
         final Button connect = (Button) findViewById(R.id.bt);
 
+        // Toast message for Bluetooth
+        toast = Toast.makeText(getApplicationContext(),R.string.success,Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.BOTTOM, 10, 400);
+
         // Start up music
         final MediaPlayer mp = MediaPlayer.create(this, R.raw.startup);
 
@@ -115,7 +122,9 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         Looper.prepare();
                         boolean fail = false;
-
+                        if(mConnectedThread != null) {
+                            mConnectedThread.cancel();
+                        }
                         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(DEVICE_ADDR.toUpperCase());
 
                         // Establish the Bluetooth socket connection.
@@ -123,10 +132,10 @@ public class MainActivity extends AppCompatActivity {
                             mBTSocket = device.createRfcommSocketToServiceRecord(SerialPortServiceClass_UUID);
                             mBTSocket.connect();
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            fail = true;
                         }
-                        if(fail == false) {
-
+                        if(!fail) {
+                            toast.show();
                             mConnectedThread = new ConnectedThread(mBTSocket);
                             mConnectedThread.start();
                         }
@@ -142,6 +151,10 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 state = isChecked ? ON : OFF;
                 mode.setEnabled(isChecked);
+                if (mConnectedThread != null) {
+                    if (state == OFF) { mConnectedThread.write("SETMODE " + OFF); }
+                    else if (state == ON) {mConnectedThread.write("SETMODE " + setMode);}
+                }
             }
         });
 
@@ -149,6 +162,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 setMode = isChecked ? AUTO : MAN;
+                if (mConnectedThread != null) {
+                    mConnectedThread.write("SETMODE " + setMode);
+                }
             }
         });
 
@@ -159,8 +175,10 @@ public class MainActivity extends AppCompatActivity {
                 joystickVal[X] = (int) (strength * Math.cos(Math.toRadians(angle)));
                 joystickVal[Y] = (int) (strength * Math.sin(Math.toRadians(angle)));
                 // update joystick values
-                mConnectedThread.write ("X " + joystickVal[X]);
-                mConnectedThread.write ("Y " + joystickVal[Y]);
+                if(mConnectedThread != null) {
+                    mConnectedThread.write ("X " + joystickVal[X]);
+                    mConnectedThread.write ("Y " + joystickVal[Y]);
+                }
             }
         });
 
@@ -249,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
 
         /* Call this from the main activity to send data to the remote device */
         public void write(String input) {
-            byte[] bytes = input.getBytes();           //converts entered String into bytes
+        byte[] bytes = input.getBytes(); // converts entered String into bytes
             try {
                 mmOutStream.write(bytes);
             } catch (IOException e) { }
