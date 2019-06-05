@@ -18,6 +18,7 @@ import android.content.DialogInterface;
 import android.content.IntentFilter;
 import android.bluetooth.*;
 import android.content.*;
+import android.os.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,8 +30,6 @@ import java.util.*;
 import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 public class MainActivity extends AppCompatActivity {
-
-    private final static int REQUEST_ENABLE_BT = 1;
 
     private static int[] display = new int[6];
     private static final int SENSOR1 = 0;
@@ -52,13 +51,19 @@ public class MainActivity extends AppCompatActivity {
 
     private static int setMode = MAN;
     private static int state = OFF;
-    //private static String \DEVICE_ADDR = "3c:15:c2:da:a4:0f";
     private static String DEVICE_ADDR = "B8:27:EB:0B:DE:D9";
+    private static final UUID SerialPortServiceClass_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+
+    private Handler mHandler; // Our main handler that will receive callback notifications
+    private ConnectedThread mConnectedThread; // bluetooth background worker thread to send and receive data
+    private BluetoothSocket mBTSocket = null; // bi-directional client-to-client data path
+
+    // #defines for identifying shared types between calling functions
+    private final static int REQUEST_ENABLE_BT = 1; // used to identify adding bluetooth names
+    private final static int MESSAGE_READ = 2; // used in bluetooth handler to identify message update
+    private final static int CONNECTING_STATUS = 3; // used in bluetooth handler to identify message status
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-    BluetoothDevice bluetoothDevice; // should be Pi
-    OutputStream btOutputStream;
-    InputStream btInputStream;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Start up music
         final MediaPlayer mp = MediaPlayer.create(this, R.raw.startup);
+
+
         mp.start();
         mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
@@ -107,29 +114,48 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-                makeDiscoverable();
-                boolean found = startSearching();
-                /*
-                try {
-                    btOutputStream.write(0x65);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                */
-                if (found) {
-                    // Dialog box
-                    AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-                    alertDialog.setTitle("Alert");
-                    alertDialog.setMessage(bluetoothDevice.getAddress());
-                    //alertDialog.setMessage(getResources().getString(R.string.success));
-                    alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
-                            new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                            });
-                    alertDialog.show();
-                }
+                new Thread()
+                {
+                    public void run() {
+                        boolean fail = false;
+
+                        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(DEVICE_ADDR.toUpperCase());
+
+                        // Establish the Bluetooth socket connection.
+                        try {
+                            mBTSocket = device.createRfcommSocketToServiceRecord(SerialPortServiceClass_UUID);
+                            mBTSocket.connect();
+                        } catch (IOException e) {
+                            try {
+                                fail = true;
+                                mBTSocket.close();
+                                mHandler.obtainMessage(CONNECTING_STATUS, -1, -1)
+                                        .sendToTarget();
+                            } catch (IOException e2) {
+                                //insert code to deal with this
+                            }
+                        }
+                        if(fail == false) {
+                            // Dialog box
+                            AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                            alertDialog.setTitle("Alert");
+                            alertDialog.setMessage(getResources().getString(R.string.success));
+                            alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
+                                    new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.dismiss();
+                                        }
+                                    });
+                            alertDialog.show();
+
+                            mConnectedThread = new ConnectedThread(mBTSocket);
+                            mConnectedThread.start();
+
+                            mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "pi")
+                                    .sendToTarget();
+                        }
+                    }
+                }.start();
             }
         });
 
@@ -156,22 +182,17 @@ public class MainActivity extends AppCompatActivity {
             public void onMove(int angle, int strength) {
                 joystickVal[X] = (int) (strength * Math.cos(Math.toRadians(angle)));
                 joystickVal[Y] = (int) (strength * Math.sin(Math.toRadians(angle)));
+                /* update joystick values;
+                * write ()
+                *
+                */
             }
         });
-
-        /*
-            changeText(sensor1, SENSOR1);
-            changeText(sensor2, SENSOR2);
-            changeText(sensor3, SENSOR3);
-            changeText(sensor4, SENSOR4);
-         */
-
-        // Bluetooth controls
 
     }
 
     private void changeText(TextView tv, int value) {
-        tv.setText(Integer.toString(value) + " cm");
+        tv.setText(value + " cm");
         if (value < 10) {
             tv.setTextColor(getResources().getColor(R.color.warning));
         } else if (value < 17) {
@@ -198,46 +219,73 @@ public class MainActivity extends AppCompatActivity {
         iv.setImageBitmap(croppedBitmap);
     }
 
-    private void makeDiscoverable() {
-        Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-        startActivity(discoverableIntent);
-    }
+    private class ConnectedThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
 
-    private boolean startSearching() {
-        Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
-        for (BluetoothDevice dev : devices) {
-            if (dev.getAddress().toUpperCase().equals(DEVICE_ADDR.toUpperCase())) {
-                bluetoothDevice = dev;
-                /*
-                ParcelUuid[] uuids = dev.getUuids();
-                BluetoothSocket socket = null;
+        public ConnectedThread(BluetoothSocket socket) {
+            mmSocket = socket;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+
+            // Get the input and output streams, using temp objects because
+            // member streams are final
+            try {
+                tmpIn = socket.getInputStream();
+                tmpOut = socket.getOutputStream();
+            } catch (IOException e) { }
+
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+        }
+
+        public void run() {
+            byte[] buffer = new byte[1024];  // buffer store for the stream
+            int bytes; // bytes returned from read()
+            // Keep listening to the InputStream until an exception occurs
+            while (true) {
                 try {
-                    socket = dev.createRfcommSocketToServiceRecord(uuids[0].getUuid());
-                    socket.connect();
-                    btInputStream = socket.getInputStream();
-                    btOutputStream = socket.getOutputStream();
+                    // Read from the InputStream
+                    bytes = mmInStream.available();
+                    if(bytes != 0) {
+                        SystemClock.sleep(100); //pause and wait for rest of data. Adjust this depending on your sending speed.
+                        bytes = mmInStream.available(); // how many bytes are ready to be read?
+                        bytes = mmInStream.read(buffer, 0, bytes); // record how many bytes we actually read
 
+                        /*
+                            changeText(sensor1, SENSOR1);
+                            changeText(sensor2, SENSOR2);
+                            changeText(sensor3, SENSOR3);
+                            changeText(sensor4, SENSOR4);
+                            setMotor(bitmapOrg, wheel1, data);
+                            setMotor(bitmapOrg, wheel2, data);
+                         */
+                        mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
+                                .sendToTarget(); // Send the obtained bytes to the UI activity
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
+
                     break;
-                }*/
-                return true;
+                }
             }
         }
-        // Then device not found
-        // Dialog box
-        AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-        alertDialog.setTitle("Alert");
-        alertDialog.setMessage("DJ Roomba Not Found");
-        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
-        alertDialog.show();
-        return false;
+
+        /* Call this from the main activity to send data to the remote device */
+        public void write(String input) {
+            byte[] bytes = input.getBytes();           //converts entered String into bytes
+            try {
+                mmOutStream.write(bytes);
+            } catch (IOException e) { }
+        }
+
+        /* Call this from the main activity to shutdown the connection */
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) { }
+        }
     }
 }
 
