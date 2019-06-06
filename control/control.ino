@@ -17,16 +17,15 @@ void setup() {
 }
 
 void loop() {
-
+/*
   noInterrupts(); // disable interrupts while measuring
-  /*
   setDistance(&one, measure(one));
   setDistance(&two, measure(two));
   setDistance(&three, measure(three));
-  setDistance(&four, measure(four));*/
+  setDistance(&four, measure(four));
   interrupts(); // re-enable interrupts
   
-  /*
+ /*
   Serial.print("One Measured distance: ");
   Serial.println((unsigned long)one.dist);
   Serial.print("Two Measured distance: ");
@@ -35,8 +34,8 @@ void loop() {
   Serial.println((unsigned long)three.dist);
   Serial.print("Four Measured distance: ");
   Serial.println((unsigned long)four.dist);
-  Serial.println();
-  */
+  Serial.println();/*
+  
   
   noInterrupts(); // disable interrupts while updating direction
   updateMove();
@@ -56,7 +55,7 @@ void loop() {
   if (REG[MODE] == AUTO) {
     setMotors(MAX_SPEED * (ns & 0x02)>>1, MAX_SPEED * (ns & 0x01));
   } else if (REG[MODE] == MAN) {
-  analogWrite(wheels.leftPin, 50);
+    analogWrite(wheels.leftPin, 50);
   }
   interrupts(); // re-enable interrupts
 
@@ -71,6 +70,13 @@ void loop() {
   
   noInterrupts(); // disable interrupts while updating state
   ps = ns; 
+  /*
+  Serial.println(REG[X_HH], HEX);
+  Serial.println(REG[X_HL], HEX);
+  Serial.println(REG[X_LH], HEX);
+  Serial.println(REG[X_LL], HEX);
+  */
+
   interrupts(); // re-enable interrupts
   delay(10);
 }
@@ -119,6 +125,10 @@ void updateMove() {
     int nsRight = (!one.warn  & (!four.warn | two.warn)) | (two.warn & (!four.warn | three.warn));
     ns = nsRight | (nsLeft << 1);         
 }
+
+int joystickToMotor() {
+    
+}
  
 // function that executes whenever data is received from master
 // this function is registered as an event, see setup()
@@ -130,7 +140,7 @@ void receiveEvent(int howMany) {
       char data = Wire.read(); // receive byte as a character
         REG[ACTIVE_INDEX] = data; 
         Serial.print("Set: ");
-        Serial.print(ACTIVE_INDEX);
+        Serial.print(ACTIVE_INDEX, HEX);
         Serial.print(" to ");
         Serial.println(REG[ACTIVE_INDEX], HEX);
         ACTIVE_INDEX ++;

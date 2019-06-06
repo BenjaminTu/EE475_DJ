@@ -2,6 +2,7 @@ package com.example.dj_app;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -13,6 +14,7 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.*;
 import android.bluetooth.*;
 import android.os.*;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,9 +27,9 @@ import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static int[] display = new int[6];
+    private static int[] display = new int[8];
     private static ArrayList<String> INDICES =
-            new ArrayList<>(Arrays.asList(new String [] {"SENSOR1", "SENSOR2", "SENSOR3", "SENSOR4", "WHEEL1", "WHEEL2"}));
+            new ArrayList<>(Arrays.asList(new String [] {"SENSOR1", "SENSOR2", "SENSOR3", "SENSOR4", "WHEEL1", "WHEEL2", "SETMODE", "MODE"}));
 
     private static int[] joystickVal = new int[2];
     private static final int X = 0;
@@ -58,6 +60,12 @@ public class MainActivity extends AppCompatActivity {
     private static ImageView wheel2;
     private static Bitmap bitmapOrg;
 
+    // Toggle Button
+    private static ToggleButton power;
+
+    // Toasts
+    private Toast toast;
+
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -67,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Toggle Button
-        final ToggleButton power = (ToggleButton) findViewById(R.id.powerButton);
+        power = (ToggleButton) findViewById(R.id.powerButton);
         final ToggleButton mode = (ToggleButton) findViewById(R.id.modeButton);
 
         // Joysticks
@@ -88,6 +96,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Connect Button
         final Button connect = (Button) findViewById(R.id.bt);
+
+        // Toast Settings
+        toast = Toast.makeText(getApplicationContext(),R.string.success,Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.BOTTOM, 0, 500);
 
         // Start up music
         final MediaPlayer mp = MediaPlayer.create(this, R.raw.startup);
@@ -116,6 +128,8 @@ public class MainActivity extends AppCompatActivity {
                         Looper.prepare();
                         boolean fail = false;
 
+                        if (mConnectedThread != null) { mConnectedThread.cancel(); }
+
                         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(DEVICE_ADDR.toUpperCase());
 
                         // Establish the Bluetooth socket connection.
@@ -126,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                         if(fail == false) {
-
+                            toast.show();
                             mConnectedThread = new ConnectedThread(mBTSocket);
                             mConnectedThread.start();
                         }
@@ -142,6 +156,10 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 state = isChecked ? ON : OFF;
                 mode.setEnabled(isChecked);
+                if(mConnectedThread != null) {
+                    if(state == ON) { mConnectedThread.write ("SETMODE " +  display[6] + "\0"); }
+                    else if (state == OFF) { mConnectedThread.write("SETMODE " + 2 + "\0"); }
+                }
             }
         });
 
@@ -149,6 +167,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 setMode = isChecked ? AUTO : MAN;
+
+
             }
         });
 
@@ -159,8 +179,10 @@ public class MainActivity extends AppCompatActivity {
                 joystickVal[X] = (int) (strength * Math.cos(Math.toRadians(angle)));
                 joystickVal[Y] = (int) (strength * Math.sin(Math.toRadians(angle)));
                 // update joystick values
-                mConnectedThread.write ("X " + joystickVal[X]);
-                mConnectedThread.write ("Y " + joystickVal[Y]);
+                if(mConnectedThread != null) {
+                    mConnectedThread.write ("X " + joystickVal[X] + "\0");
+                    mConnectedThread.write ("Y " + joystickVal[Y] + "\0");
+                }
             }
         });
 
@@ -230,14 +252,23 @@ public class MainActivity extends AppCompatActivity {
                         bytes = mmInStream.read(buffer, 0, bytes); // record how many bytes we actually read
                         int end = new String(buffer).indexOf(0); // end at null;
                         String[] data = new String(buffer).substring(0,end).split("\\s+");
-                        display[INDICES.indexOf(data[0].toUpperCase())] = Integer.parseInt(data[1]);
+                        int ind = INDICES.indexOf(data[0].toUpperCase());
+                        System.out.println(data[0]);
+                        System.out.println(data[1]);
+                        try {
+                            if(ind != -1) { display[ind] = Integer.parseInt(data[1]); }
+                        } catch (NumberFormatException e) {
+
+                        }
 
                         changeText(sensor1, display[0]);
                         changeText(sensor2, display[1]);
                         changeText(sensor3, display[2]);
                         changeText(sensor4, display[3]);
-                        setMotor(bitmapOrg, wheel1, display[4]);
-                        setMotor(bitmapOrg, wheel2, display[5]);
+                        setMotor(bitmapOrg, wheel1, (int) (display[4] / 256.0));
+                        setMotor(bitmapOrg, wheel2, (int) (display[5] / 256.0));
+                        state = display[7];
+
 
                     }
                 } catch (IOException e) {
