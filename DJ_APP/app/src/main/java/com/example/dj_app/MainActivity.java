@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
                             mBTSocket = device.createRfcommSocketToServiceRecord(SerialPortServiceClass_UUID);
                             mBTSocket.connect();
                         } catch (IOException e) {
+                            fail = true;
                             e.printStackTrace();
                         }
                         if(fail == false) {
