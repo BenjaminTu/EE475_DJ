@@ -64,7 +64,8 @@ public class MainActivity extends AppCompatActivity {
     private static ToggleButton power;
 
     // Toasts
-    private Toast toast;
+    private Toast toastSuccess;
+    private Toast toastFail;
 
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -98,8 +99,11 @@ public class MainActivity extends AppCompatActivity {
         final Button connect = (Button) findViewById(R.id.bt);
 
         // Toast Settings
-        toast = Toast.makeText(getApplicationContext(),R.string.success,Toast.LENGTH_SHORT);
-        toast.setGravity(Gravity.BOTTOM, 0, 500);
+        toastSuccess = Toast.makeText(getApplicationContext(),R.string.success,Toast.LENGTH_SHORT);
+        toastSuccess.setGravity(Gravity.BOTTOM, 0, 500);
+
+        toastFail = Toast.makeText(getApplicationContext(),R.string.fail,Toast.LENGTH_SHORT);
+        toastFail.setGravity(Gravity.BOTTOM, 0, 500);
 
         // Start up music
         final MediaPlayer mp = MediaPlayer.create(this, R.raw.startup);
@@ -141,9 +145,11 @@ public class MainActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                         if(fail == false) {
-                            toast.show();
+                            toastSuccess.show();
                             mConnectedThread = new ConnectedThread(mBTSocket);
                             mConnectedThread.start();
+                        } else {
+                            toastFail.show();
                         }
                     }
                 }.start();
@@ -158,8 +164,11 @@ public class MainActivity extends AppCompatActivity {
                 state = isChecked ? ON : OFF;
                 mode.setEnabled(isChecked);
                 if(mConnectedThread != null) {
-                    if(state == ON) { mConnectedThread.write ("SETMODE " +  display[6] + "\0"); }
-                    else if (state == OFF) { mConnectedThread.write("SETMODE " + 2 + "\0"); }
+                    if(state == ON) { mConnectedThread.write ("SETMODE " +  setMode + "\0"); }
+                    else if (state == OFF) {
+                        display[6] = 2;
+                        mConnectedThread.write("SETMODE " + 2 + "\0");
+                    }
                 }
             }
         });
@@ -168,8 +177,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 setMode = isChecked ? AUTO : MAN;
-
-
+                display[6] = setMode;
+                if(mConnectedThread != null) { mConnectedThread.write("SETMODE " +  display[6] + "\0");}
             }
         });
 
@@ -201,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setMotor(Bitmap bitmapOrg, ImageView iv, int percentage) {
+        if(percentage > 100 || percentage < 0) { return; } // prevent braking
 
         int newHeight = (int) (bitmapOrg.getHeight() * percentage / 100.0);
         int startingY = (int) (bitmapOrg.getHeight() * (1.0f - (percentage / 100.0)));
@@ -266,10 +276,19 @@ public class MainActivity extends AppCompatActivity {
                         changeText(sensor2, display[1]);
                         changeText(sensor3, display[2]);
                         changeText(sensor4, display[3]);
-                        setMotor(bitmapOrg, wheel1, (int) (display[4] / 256.0));
-                        setMotor(bitmapOrg, wheel2, (int) (display[5] / 256.0));
-                        state = display[7];
+                        System.out.println((int) (display[4] / 256.0 * 100));
 
+                        runOnUiThread(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                setMotor(bitmapOrg, wheel1, (int) (display[4] / 256.0 * 100));
+                                setMotor(bitmapOrg, wheel2, (int) (display[5] / 256.0 * 100));
+                            }
+                        });
+
+
+                        state = display[7];
 
                     }
                 } catch (IOException e) {

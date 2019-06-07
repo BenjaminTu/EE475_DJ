@@ -9,6 +9,8 @@
     <string name="wheel">wheel </string>
     <string name="connect">Connect ! </string>
     <string name="success">Device Connected </string>
+    <string name="fail">Device NOT Connected </string>
+
 
 
 

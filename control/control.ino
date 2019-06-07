@@ -2,6 +2,9 @@
 
 static int x = 125;
 
+static int leftSig = 0;
+static int rightSig = 0;
+
 void setup() {
   sensor_setup(one);
   sensor_setup(two);
@@ -9,6 +12,8 @@ void setup() {
   sensor_setup(four);
   Serial.begin(9600);
 
+  REG[0x8] = 2; // MODE_OFF
+  REG[0x9] = 2; // MODE_OFF
 
   Wire.begin(0x62);             // join i2c bus with address #62
   Wire.onReceive(receiveEvent); // register event / Slave Reader
@@ -17,7 +22,7 @@ void setup() {
 }
 
 void loop() {
-/*
+
   noInterrupts(); // disable interrupts while measuring
   setDistance(&one, measure(one));
   setDistance(&two, measure(two));
@@ -34,7 +39,7 @@ void loop() {
   Serial.println((unsigned long)three.dist);
   Serial.print("Four Measured distance: ");
   Serial.println((unsigned long)four.dist);
-  Serial.println();/*
+  Serial.println();*/
   
   
   noInterrupts(); // disable interrupts while updating direction
@@ -48,36 +53,43 @@ void loop() {
   Serial.println(ns);
   Serial.println();
   */
+  
 
   noInterrupts(); // disable interrupts while setting motors
   // setting mode
+
   REG[MODE] = REG[SET_MODE];
+
   if (REG[MODE] == AUTO) {
-    setMotors(MAX_SPEED * (ns & 0x02)>>1, MAX_SPEED * (ns & 0x01));
+    // auto mode
+    setMotors(MAX_SPEED * ((ns & 0x02) >> 1), MAX_SPEED * (!(ns & 0x02)), MAX_SPEED * (ns & 0x01), MAX_SPEED * (!(ns & 0x01)));
   } else if (REG[MODE] == MAN) {
-    analogWrite(wheels.leftPin, 50);
+    // manual mode
+    joystickToMotor();
+  } else if (REG[MODE] == MODE_OFF) {
+    // off
+    setMotors(0, 0, 0, 0);
   }
   interrupts(); // re-enable interrupts
 
+
   /*
-  Serial.print("Left: ");
-  Serial.println(wheels.left);
-  Serial.print("Right: ");
-  Serial.println(wheels.right);
+  Serial.print("LeftF: ");
+  Serial.println(wheels.leftF);
+  Serial.print("LeftB: ");
+  Serial.println(wheels.leftB);
+  Serial.print("RightF: ");
+  Serial.println(wheels.rightF);
+  Serial.print("RightB: ");
+  Serial.println(wheels.rightB);
   Serial.println();
   */
   
   
   noInterrupts(); // disable interrupts while updating state
   ps = ns; 
-  /*
-  Serial.println(REG[X_HH], HEX);
-  Serial.println(REG[X_HL], HEX);
-  Serial.println(REG[X_LH], HEX);
-  Serial.println(REG[X_LL], HEX);
-  */
-
   interrupts(); // re-enable interrupts
+  
   delay(10);
 }
 
@@ -88,13 +100,21 @@ void sensor_setup(sensorID sense) {
 }
 
 void motorSetup() {
-  pinMode(wheels.leftPin, OUTPUT);
-  pinMode(wheels.rightPin, OUTPUT);
+  pinMode(wheels.leftFPin, OUTPUT);
+  pinMode(wheels.leftBPin, OUTPUT);
+  pinMode(wheels.rightFPin, OUTPUT);
+  pinMode(wheels.rightBPin, OUTPUT);
 }
 
 void setDistance(sensorID* sense, unsigned long distance) { 
   sense->dist = distance; 
-  sense-> warn = (distance < 10)? YES : NO;  
+  sense-> warn = (distance < 10)? YES : NO;
+  // write in register
+  REG[0x6 + (sense->ID) * 4] = (distance >> 0x24) & 0xFF; 
+  REG[0x7 + (sense->ID) * 4] = (distance >> 0x16) & 0xFF; 
+  REG[0x8 + (sense->ID) * 4] = (distance >> 0x8) & 0xFF; 
+  REG[0x9 + (sense->ID) * 4] = (distance) & 0xFF; 
+
 }
 
 unsigned long measure(sensorID sense) {
@@ -109,15 +129,41 @@ unsigned long measure(sensorID sense) {
   return (duration/2) * 0.0343; 
 }
 
-void setMotors(int speedL,int speedR) {
-  // ramping 
-  int diffL = speedL - (wheels.left);
-  (&wheels)->left += REPSONSE_FACTOR * diffL;
-  int diffR = speedR - (wheels.right);
-  (&wheels)->right += REPSONSE_FACTOR * diffR;
+void setMotors(int speedLF, int speedLB, int speedRF, int speedRB) {
+  // ramping
   
-  analogWrite(wheels.leftPin, wheels.left);
-  analogWrite(wheels.rightPin, wheels.right);
+  int diffLF = speedLF - (wheels.leftF);
+  (&wheels)->leftF += REPSONSE_FACTOR * diffLF;
+  int diffLB = speedLB - (wheels.leftB);
+  (&wheels)->leftB += REPSONSE_FACTOR * diffLB;
+
+  int diffRF = speedRF - (wheels.rightF);
+  (&wheels)->rightF += REPSONSE_FACTOR * diffRF;
+  int diffRB = speedRB - (wheels.rightB);
+  (&wheels)->rightB += REPSONSE_FACTOR * diffRB;
+ 
+  // write in register
+  
+  // left 
+  int leftData = max(wheels.leftF, wheels.leftB);
+  REG[0x1A] = (leftData >> 0x24) & 0xFF; 
+  REG[0x1B] = (leftData >> 0x16) & 0xFF; 
+  REG[0x1C] = (leftData >> 0x8) & 0xFF; 
+  REG[0x1D] = (leftData) & 0xFF; 
+
+  // right
+  int rightData = max(wheels.rightF, wheels.rightB);
+  REG[0x1E] = (rightData >> 0x24) & 0xFF; 
+  REG[0x1F] = (rightData >> 0x16) & 0xFF; 
+  REG[0x20] = (rightData >> 0x8) & 0xFF; 
+  REG[0x21] = (rightData) & 0xFF; 
+  
+  analogWrite(wheels.leftFPin, wheels.leftF);
+  analogWrite(wheels.leftBPin, wheels.leftB);
+
+  analogWrite(wheels.rightFPin, wheels.rightF);
+  analogWrite(wheels.rightBPin, wheels.rightB);
+  
 }
 
 void updateMove() {
@@ -126,8 +172,23 @@ void updateMove() {
     ns = nsRight | (nsLeft << 1);         
 }
 
-int joystickToMotor() {
-    
+void joystickToMotor() {
+  int x = (int) REG[0x0] << 24 | REG[0x1] << 16 | REG[0x2] << 8 | REG[0x3];
+  int y = (int) REG[0x4] << 24 | REG[0x5] << 16 | REG[0x6] << 8 | REG[0x7];
+
+  int lf, rf, lb, rb;
+  int yf = (y > 0)? (y / 100.0 * MAX_SPEED): 0;
+  int yb = (y < 0)? (-y / 100.0 * MAX_SPEED): 0;
+  
+  int xf = (x > 0)? (x / 100.0 * MAX_SPEED): 0;
+  int xb = (x < 0)? (-x / 100.0 * MAX_SPEED): 0;
+
+  Serial.println(wheels.leftF);
+  (&wheels)->leftF = sqrt(pow(yf, 2) + pow(xf, 2));
+  (&wheels)->leftB = sqrt(pow(yb, 2) + pow(xf, 2));
+  (&wheels)->rightF = sqrt(pow(yf, 2) + pow(xb, 2));
+  (&wheels)->rightB = sqrt(pow(yb, 2) + pow(xb, 2));
+  
 }
  
 // function that executes whenever data is received from master
@@ -139,10 +200,12 @@ void receiveEvent(int howMany) {
     while (Wire.available() > 0) {
       char data = Wire.read(); // receive byte as a character
         REG[ACTIVE_INDEX] = data; 
+        /*
         Serial.print("Set: ");
         Serial.print(ACTIVE_INDEX, HEX);
         Serial.print(" to ");
         Serial.println(REG[ACTIVE_INDEX], HEX);
+        */
         ACTIVE_INDEX ++;
     }
     ACTIVE_INDEX = index;

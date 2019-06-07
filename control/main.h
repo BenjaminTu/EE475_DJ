@@ -11,8 +11,9 @@
 #define REVERSE -1
 
 // mode
-#define AUTO    1
-#define MAN     0 
+#define MODE_OFF  2
+#define AUTO      1
+#define MAN       0 
 
 // warning
 #define YES     1
@@ -20,7 +21,7 @@
 
 // REG INDICES
 
-//JOYSTICK X
+// JOYSTICK X
 #define X_HH          0x0
 #define X_HL          0x1
 #define X_LH          0x2
@@ -72,33 +73,38 @@
 #define WHEEL2_LH     0x20
 #define WHEEL2_LL     0x21
 
-#define REPSONSE_FACTOR 0.25
-#define MAX_SPEED 128
+#define REPSONSE_FACTOR 0.5
+#define MAX_SPEED 255
 
 int ps = OFF, ns = OFF;
 unsigned char REG[34] =  {0}; 
 int ACTIVE_INDEX;
 
 typedef struct{
-    int leftPin;
-    int rightPin;
+    int leftFPin;
+    int leftBPin;
+    int rightFPin;
+    int rightBPin;
     int leftDir;
     int rightDir;
-    int left;
-    int right;
+    int leftF;
+    int leftB;
+    int rightF;
+    int rightB;
     int stat;
   } control;
 
-control wheels = (control) {2, 3, OFF, OFF, 0, 0, OFF};
+control wheels = (control) {2, 3, 4, 5, OFF, OFF, 0, 0, 0, 0, OFF};
 
 typedef struct {
     int echoPin;
     int triggerPin;
     unsigned long dist;
     int warn;
+    int ID;
   } sensorID;
 
-sensorID one = (sensorID) {13, 12, 0, NO};
-sensorID two = (sensorID) {11, 10, 0, NO};
-sensorID three = (sensorID) {9, 8, 0, NO};
-sensorID four = (sensorID) {7, 6, 0, NO};
+sensorID one = (sensorID) {13, 12, 0, NO, 1};
+sensorID two = (sensorID) {11, 10, 0, NO, 2};
+sensorID three = (sensorID) {9, 8, 0, NO, 3};
+sensorID four = (sensorID) {7, 6, 0, NO, 4};
