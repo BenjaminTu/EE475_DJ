@@ -6,6 +6,7 @@ static int leftSig = 0;
 static int rightSig = 0;
 
 void setup() {
+
   sensor_setup(one);
   sensor_setup(two);
   sensor_setup(three); 
@@ -22,7 +23,7 @@ void setup() {
 }
 
 void loop() {
-
+  
   noInterrupts(); // disable interrupts while measuring
   setDistance(&one, measure(one));
   setDistance(&two, measure(two));
@@ -58,15 +59,15 @@ void loop() {
   noInterrupts(); // disable interrupts while setting motors
   // setting mode
 
+  Serial.println(REG[MODE]);
   REG[MODE] = REG[SET_MODE];
-
   if (REG[MODE] == AUTO) {
     // auto mode
     setMotors(MAX_SPEED * ((ns & 0x02) >> 1), MAX_SPEED * (!(ns & 0x02)), MAX_SPEED * (ns & 0x01), MAX_SPEED * (!(ns & 0x01)));
   } else if (REG[MODE] == MAN) {
     // manual mode
     joystickToMotor();
-  } else if (REG[MODE] == MODE_OFF) {
+  } else {
     // off
     setMotors(0, 0, 0, 0);
   }
@@ -90,7 +91,8 @@ void loop() {
   ps = ns; 
   interrupts(); // re-enable interrupts
   
-  delay(10);
+  delay(5);
+
 }
 
 
@@ -176,19 +178,52 @@ void joystickToMotor() {
   int x = (int) REG[0x0] << 24 | REG[0x1] << 16 | REG[0x2] << 8 | REG[0x3];
   int y = (int) REG[0x4] << 24 | REG[0x5] << 16 | REG[0x6] << 8 | REG[0x7];
 
+  Serial.print("X");
+  Serial.println(x);
+  Serial.print("Y");
+  Serial.println(y);
+  
   int lf, rf, lb, rb;
-  int yf = (y > 0)? (y / 100.0 * MAX_SPEED): 0;
-  int yb = (y < 0)? (-y / 100.0 * MAX_SPEED): 0;
   
-  int xf = (x > 0)? (x / 100.0 * MAX_SPEED): 0;
-  int xb = (x < 0)? (-x / 100.0 * MAX_SPEED): 0;
+  int deltaX =  (x / 100.0 * MAX_SPEED);
+  int deltaY = (y / 100.0 * MAX_SPEED);
 
-  Serial.println(wheels.leftF);
-  (&wheels)->leftF = sqrt(pow(yf, 2) + pow(xf, 2));
-  (&wheels)->leftB = sqrt(pow(yb, 2) + pow(xf, 2));
-  (&wheels)->rightF = sqrt(pow(yf, 2) + pow(xb, 2));
-  (&wheels)->rightB = sqrt(pow(yb, 2) + pow(xb, 2));
-  
+  if (deltaX > 0 && deltaY >= 0) {
+    // first quadrant
+    lf = abs(deltaY + deltaX) / 2;
+    rf = abs(deltaY - deltaX) / 2;
+    lb = 0;
+    rb = 0;
+  } else if (deltaX <= 0 && deltaY > 0) { 
+    // second quadrant
+    lf = abs(deltaY - deltaX) / 2;
+    rf = abs(deltaY + deltaX) / 2;
+    lb = 0;
+    rb = 0; 
+  } else if (deltaX < 0 && deltaY <= 0) {
+    // third quadrant
+    lb = abs(deltaY - deltaX) / 2;
+    rb = abs(deltaY + deltaX) / 2;
+    lf = 0;
+    rf = 0; 
+  } else { 
+    // fourth qudrant
+    lb = abs(deltaY + deltaX) / 2;
+    rb = abs(deltaY - deltaX) / 2;
+    lf = 0;
+    rf = 0;  
+  }
+
+  (&wheels)->leftF = lf;
+  (&wheels)->leftB = lb;
+  (&wheels)->rightF = rf;
+  (&wheels)->rightB = rb;
+
+  analogWrite(wheels.leftFPin, wheels.leftF);
+  analogWrite(wheels.leftBPin, wheels.leftB);
+  analogWrite(wheels.rightFPin, wheels.rightF);
+  analogWrite(wheels.rightBPin, wheels.rightB);
+
 }
  
 // function that executes whenever data is received from master

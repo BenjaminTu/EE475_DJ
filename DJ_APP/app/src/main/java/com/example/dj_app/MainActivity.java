@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 
+import java.time.Instant;
+import java.time.Duration;
 import java.util.*;
 
 import io.github.controlwear.virtual.joystick.android.JoystickView;
@@ -264,8 +266,7 @@ public class MainActivity extends AppCompatActivity {
                         int end = new String(buffer).indexOf(0); // end at null;
                         String[] data = new String(buffer).substring(0,end).split("\\s+");
                         int ind = INDICES.indexOf(data[0].toUpperCase());
-                        System.out.println(data[0]);
-                        System.out.println(data[1]);
+
                         try {
                             if(ind != -1) { display[ind] = Integer.parseInt(data[1]); }
                         } catch (NumberFormatException e) {
@@ -276,7 +277,6 @@ public class MainActivity extends AppCompatActivity {
                         changeText(sensor2, display[1]);
                         changeText(sensor3, display[2]);
                         changeText(sensor4, display[3]);
-                        System.out.println((int) (display[4] / 256.0 * 100));
 
                         runOnUiThread(new Runnable() {
 
