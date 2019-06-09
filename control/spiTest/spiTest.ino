@@ -27,25 +27,58 @@ ISR (SPI_STC_vect) {// SPI interrupt routine
    }
 }
 
+int processValue(char *buff, int startIndex)
+{
+  int index = startIndex;
+  char thisChar = buff[startIndex];
+  int value = 0;
+  int sign = 1; // 1 = positive, -1 = negative
+  int numbers = 0;
+  while(thisChar != '\0' && (index-startIndex) <= 5)
+  {
+    if (thisChar != ' ')
+    {
+      if (thisChar == '-')
+      {
+         sign = -1;
+      }
+      else if (thisChar <= 57 && thisChar >= 48) 
+      {
+          int charVal = thisChar - 48;
+          value *= 10;
+          value += charVal;
+      }
+    }
+    thisChar = buff[++index];
+  }
+  if (index-startIndex > 5) { return 0; }
+  return value * sign;
+}
+
+int limitVal(int val) 
+{
+  return val % 100;
+}
+
 void processSPI()
 {
   if (process) {
       process = false; //reset the process
-      Serial.println(buff); //print the array on serial monitor
       char sw = buff[0];
-      if (sw == "S") 
+      int val = processValue(buff, 1);
+
+      if (sw == 'S') 
       {
-        
+        MODE = val;
       }
-      else if (sw == "X") 
+      else if (sw == 'X') 
       {
-        
+        X = limitVal(val);
       }
-      else if (sw == "Y")
+      else if (sw == 'Y')
       {
-        
-      }
-      
+        Y = limitVal(val);
+      }            
       indx = 0; //reset button to zero
    }
 }
