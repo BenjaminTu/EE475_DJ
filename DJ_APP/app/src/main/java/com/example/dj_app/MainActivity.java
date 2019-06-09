@@ -168,10 +168,16 @@ public class MainActivity extends AppCompatActivity {
                 state = isChecked ? ON : OFF;
                 mode.setEnabled(isChecked);
                 if(mConnectedThread != null) {
-                    if(state == ON) { mConnectedThread.write ("S " +  setMode + "\0"); }
+                    if(state == ON) {
+                        for (int i = 0; i < 10; i++) {
+                            mConnectedThread.write ("S" +  setMode + "\0");
+                        }
+                    }
                     else if (state == OFF) {
                         display[6] = 2;
-                        mConnectedThread.write("S " + 2 + "\0");
+                        for (int i = 0; i < 10; i++) {
+                            mConnectedThread.write("S" + 2 + "\0");
+                        }
                     }
                 }
             }
@@ -182,7 +188,11 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 setMode = isChecked ? AUTO : MAN;
                 display[6] = setMode;
-                if(mConnectedThread != null) { mConnectedThread.write("S " +  display[6] + "\0");}
+                if(mConnectedThread != null) {
+                    for (int i = 0; i < 10; i++) {
+                        mConnectedThread.write("S" + display[6] + "\0");
+                    }
+                }
             }
         });
 
@@ -194,8 +204,8 @@ public class MainActivity extends AppCompatActivity {
                 joystickVal[Y] = (int) (strength * Math.sin(Math.toRadians(angle)));
                 // update joystick values
                 if(mConnectedThread != null) {
-                    mConnectedThread.write ("X " + joystickVal[X] + "\0");
-                    mConnectedThread.write ("Y " + joystickVal[Y] + "\0");
+                    mConnectedThread.write ("X" + joystickVal[X] + "\0");
+                    mConnectedThread.write ("Y" + joystickVal[Y] + "\0");
                 }
             }
         });

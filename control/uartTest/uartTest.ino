@@ -1,19 +1,20 @@
 #include <SPI.h>
+#include "main.h"
 
 String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 
 void setup() {
   btSetup();
-  //spiSetup();
+  spiSetup();
 }
 
 void loop() {
   // print the string when a newline arrives
   if (stringComplete) {
     // clear the string:
-    //spiWrite();
-    Serial.println(inputString);
+    spiWrite();
+    //Serial.println(inputString);
     inputString = "";
     stringComplete = false;
   }
@@ -35,6 +36,26 @@ void btSetup() {
   Serial.begin(115200);
 }
 
+void sensor_setup(sensorID sense) {
+  pinMode(sense.echoPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(sense.echoPin), measure, CHANGE);
+  pinMode(sense.triggerPin, OUTPUT);
+}
+
+void startMeasure(senseID sense) {
+  // send a trigger pulse of 1ms
+  digitalWrite(sense.triggerPin, LOW);
+  delayMicroseconds(5);
+  digitalWrite(sense.triggerPin, HIGH);
+  delayMicroseconds(50); 
+  digitalWrite(sense.triggerPin, LOW);
+}
+
+void measure() {
+  unsigned long duration = pulseIn(sense.echoPin, HIGH);
+  return (duration/2) * 0.0343; 
+}
+  
 void spiSetup() {
    digitalWrite(SS, HIGH); // disable Slave Select
    SPI.begin();
