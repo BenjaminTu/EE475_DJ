@@ -80,7 +80,7 @@ void processSPI()
 
       if (sw == 'S') 
       {
-        REG[MODE] = val;
+        REG[SET_MODE] = val;
       }
       else if (sw == 'X') 
       {
