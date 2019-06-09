@@ -1,7 +1,98 @@
 #include "main.h"
+#include <SPI.h>
 
 String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
+
+char buff[50];
+volatile byte indx;
+volatile boolean process;
+
+ISR (SPI_STC_vect) {// SPI interrupt routine 
+   byte c = SPDR; // read byte from SPI Data Register
+   if (indx < sizeof buff) {
+      buff [indx++] = c; // save data in the next index in the array buff
+      if (c == '\0') { //check for the end of the word
+        process = true;
+      }
+   }
+}
+
+int processValue(char *buff, int startIndex)
+{
+  int index = startIndex;
+  char thisChar = buff[startIndex];
+  int value = 0;
+  int sign = 1; // 1 = positive, -1 = negative
+  int numbers = 0;
+  while(thisChar != '\0' && (index-startIndex) <= 5)
+  {
+    if (thisChar != ' ')
+    {
+      if (thisChar == '-')
+      {
+         sign = -1;
+      }
+      else if (thisChar <= 57 && thisChar >= 48) 
+      {
+          int charVal = thisChar - 48;
+          value *= 10;
+          value += charVal;
+      }
+    }
+    thisChar = buff[++index];
+  }
+  if (index-startIndex > 5) { return 0; }
+  return value * sign;
+}
+
+int limitVal(int val) 
+{
+  return val % 100;
+}
+
+void setX(int joystickX)
+{
+  int firstByte = joystickX & 0xFF;
+  int secondByte = (joystickX & 0xFF00) >> 8;
+  REG[X_HH] = 0x00;
+  REG[X_HL] = 0x00;
+  REG[X_LH] = secondByte;
+  REG[X_LL] = firstByte;
+}
+
+void setY(int joystickY)
+{
+  int firstByte = joystickY & 0xFF;
+  int secondByte = (joystickY & 0xFF00) >> 8;
+  REG[Y_HH] = 0x00;
+  REG[Y_HL] = 0x00;
+  REG[Y_LH] = secondByte;
+  REG[Y_LL] = firstByte;
+}
+
+void processSPI()
+{
+  if (process) {
+      process = false; //reset the process
+      char sw = buff[0];
+      int val = processValue(buff, 1);
+
+      if (sw == 'S') 
+      {
+        REG[MODE] = val;
+      }
+      else if (sw == 'X') 
+      {
+        setX(limitVal(val));
+      }
+      else if (sw == 'Y')
+      {
+        setY(limitVal(val));
+      }            
+      indx = 0; //reset button to zero
+   }
+}
 
 void setup() {
   Serial.begin(9600);
@@ -14,6 +105,12 @@ void setup() {
   
   REG[0x8] = 2; // MODE_OFF
   REG[0x9] = 2; // MODE_OFF
+
+  pinMode(MISO, OUTPUT); // have to send on master in so it set as output
+  SPCR |= _BV(SPE); // turn on SPI in slave mode
+  indx = 0; // buffer empty
+  process = false;
+  SPI.attachInterrupt(); // turn on interrupt
 
   Wire.begin(0x62);             // join i2c bus with address #62
   Wire.onReceive(receiveEvent); // register event / Slave Reader
