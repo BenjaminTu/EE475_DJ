@@ -19,6 +19,8 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.regex.Pattern;
+import java.nio.*;
 
 
 import java.time.Instant;
@@ -45,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static int setMode = MAN;
     private static int state = OFF;
-    private static String DEVICE_ADDR = "B8:27:EB:0B:DE:D9";
+    private static String DEVICE_ADDR = "00:06:66:86:5F:CF";
     private static final UUID SerialPortServiceClass_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private ConnectedThread mConnectedThread; // bluetooth background worker thread to send and receive data
@@ -253,22 +255,43 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             Looper.prepare();
             int bytes; // bytes returned from read()
+            byte[] buffer = new byte[1024];
             // Keep listening to the InputStream until an exception occurs
             while (true) {
+
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.available();
+                    mmInStream.read(buffer);
+                    System.out.println("bytes: " + bytes);
                     if(bytes != 0) {
                         SystemClock.sleep(1); //pause and wait for rest of data. Adjust this depending on your sending speed.
-                        bytes = mmInStream.available(); // how many bytes are ready to be read?
-                        byte[] buffer = new byte[bytes];  // buffer store for the stream
-                        bytes = mmInStream.read(buffer, 0, bytes); // record how many bytes we actually read
-                        int end = new String(buffer).indexOf(0); // end at null;
-                        String[] data = new String(buffer).substring(0,end).split("\\s+");
-                        int ind = INDICES.indexOf(data[0].toUpperCase());
+                        //bytes = mmInStream.available(); // how many bytes are ready to be read?
+                        //byte[] buffer = new byte[bytes];  // buffer store for the stream
+                        String str = new String(buffer);
+                        String[] packets = str.split(":");
+                        for(int i = 0; i < packets.length; i++) {
+                            String data = packets[i].trim().toUpperCase();
+                            String split[] = data.split(" ");
+
+                            if (split.length == 2 && Pattern.matches("[0-9]+", split[1])) {
+                                // if the packet can be broken into more than 2 part
+                                if (Pattern.matches("SENSOR[1234]", split[0])) {
+                                    int ind = INDICES.indexOf(split[0].toUpperCase());
+                                    display[ind] = Integer.parseInt(split[1]);
+                                } else if (Pattern.matches("WHEEL[12]", split[0])) {
+                                    int ind = INDICES.indexOf(split[0].toUpperCase());
+                                    display[ind] = Integer.parseInt(split[1]);
+                                }
+                            }
+                        }
+                        //int end = new String(buffer).indexOf('\0'); // end at null
+                        //System.out.println("end at " + end);
+                        //String[] data = new String(buffer).substring(0,end).split("\\s+");
+                        //int ind = INDICES.indexOf(data[0].toUpperCase());
 
                         try {
-                            if(ind != -1) { display[ind] = Integer.parseInt(data[1]); }
+                            //if(ind != -1) { display[ind] = Integer.parseInt(data[1]); }
                         } catch (NumberFormatException e) {
 
                         }
@@ -289,7 +312,6 @@ public class MainActivity extends AppCompatActivity {
 
 
                         state = display[7];
-
                     }
                 } catch (IOException e) {
                     e.printStackTrace();

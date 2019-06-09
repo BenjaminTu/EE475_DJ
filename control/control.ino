@@ -1,25 +1,23 @@
 #include "main.h"
 
-static int x = 125;
-
-static int leftSig = 0;
-static int rightSig = 0;
+String inputString = "";         // a String to hold incoming data
+bool stringComplete = false;  // whether the string is complete
 
 void setup() {
+  Serial.begin(9600);
 
   sensor_setup(one);
   sensor_setup(two);
   sensor_setup(three); 
   sensor_setup(four);
-  Serial.begin(9600);
-
+  btSetup();
+  
   REG[0x8] = 2; // MODE_OFF
   REG[0x9] = 2; // MODE_OFF
 
   Wire.begin(0x62);             // join i2c bus with address #62
   Wire.onReceive(receiveEvent); // register event / Slave Reader
   Wire.onRequest(requestEvent); // register event / Slave Writer
-
 }
 
 void loop() {
@@ -43,23 +41,9 @@ void loop() {
   Serial.println();*/
   
   
-  noInterrupts(); // disable interrupts while updating direction
   updateMove();
-  interrupts(); // re-enable interrupts
-
-  /*
-  Serial.print("Present State: ");
-  Serial.println(ns);
-  Serial.print("Next State: ");
-  Serial.println(ns);
-  Serial.println();
-  */
-  
-
-  noInterrupts(); // disable interrupts while setting motors
   // setting mode
 
-  Serial.println(REG[MODE]);
   REG[MODE] = REG[SET_MODE];
   if (REG[MODE] == AUTO) {
     // auto mode
@@ -71,28 +55,16 @@ void loop() {
     // off
     setMotors(0, 0, 0, 0);
   }
-  interrupts(); // re-enable interrupts
 
-
-  /*
-  Serial.print("LeftF: ");
-  Serial.println(wheels.leftF);
-  Serial.print("LeftB: ");
-  Serial.println(wheels.leftB);
-  Serial.print("RightF: ");
-  Serial.println(wheels.rightF);
-  Serial.print("RightB: ");
-  Serial.println(wheels.rightB);
-  Serial.println();
-  */
-  
-  
-  noInterrupts(); // disable interrupts while updating state
   ps = ns; 
-  interrupts(); // re-enable interrupts
   
-  delay(5);
-
+  if (stringComplete) {
+    //Serial.println(inputString);
+    // clear the string:
+    inputString = "";
+    stringComplete = false;
+  }
+  
 }
 
 
@@ -108,6 +80,13 @@ void motorSetup() {
   pinMode(wheels.rightBPin, OUTPUT);
 }
 
+void btSetup() {
+  // reserve 20 bytes for inputString
+  inputString.reserve(200);
+  Serial3.begin(115200);
+
+}
+
 void setDistance(sensorID* sense, unsigned long distance) { 
   sense->dist = distance; 
   sense-> warn = (distance < 10)? YES : NO;
@@ -115,7 +94,12 @@ void setDistance(sensorID* sense, unsigned long distance) {
   REG[0x6 + (sense->ID) * 4] = (distance >> 0x24) & 0xFF; 
   REG[0x7 + (sense->ID) * 4] = (distance >> 0x16) & 0xFF; 
   REG[0x8 + (sense->ID) * 4] = (distance >> 0x8) & 0xFF; 
-  REG[0x9 + (sense->ID) * 4] = (distance) & 0xFF; 
+  REG[0x9 + (sense->ID) * 4] = (distance) & 0xFF;
+  String data = "SENSOR" + String(sense->ID) + " " + String(distance) + "\0";
+  char cString[20]; 
+  for (int i = 0; i < data.length(); i++) {cString[i] = data[i];}
+  // Serial3.write(cString); 
+  // Serial.println(cString);
 
 }
 
@@ -261,6 +245,30 @@ void requestEvent() {
 
   // as expected by master
 }
+
+
+void serialEvent3() {
+  while (Serial3.available()) {
+    //Serial.println(Serial3.available());
+   
+    // get the new byte:
+    char inChar = (char)Serial3.read();
+    // add it to the inputString:
+    Serial.println(inChar, HEX);
+    inputString += inChar;
+    stringComplete = true;
+    // if the incoming character is a null terminator, set a flag so the main loop can
+    // do something about it:
+    
+    if (inChar == ':') {
+      stringComplete = true;
+    } 
+    // if the incoming character is a null terminator, set a flag so the main loop can
+    // do something about it:
+  }
+  Serial.println();
+}
+
 
 
 
