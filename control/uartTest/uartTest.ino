@@ -5,14 +5,15 @@ bool stringComplete = false;  // whether the string is complete
 
 void setup() {
   btSetup();
-  spiSetup();
+  //spiSetup();
 }
 
 void loop() {
   // print the string when a newline arrives
   if (stringComplete) {
     // clear the string:
-    spiWrite();
+    //spiWrite();
+    Serial.println(inputString);
     inputString = "";
     stringComplete = false;
   }
@@ -25,7 +26,7 @@ void loop() {
   
   Serial.write(cString); 
   */
-  delay(10);
+  //delay(10);
 }
 
 void btSetup() {
@@ -36,7 +37,7 @@ void btSetup() {
 
 void spiSetup() {
    digitalWrite(SS, HIGH); // disable Slave Select
-   SPI.begin ();
+   SPI.begin();
    SPI.setClockDivider(SPI_CLOCK_DIV8);//divide the clock by 8
 }
 
@@ -44,10 +45,11 @@ void spiWrite() {
    char c;
    digitalWrite(SS, LOW); // enable Slave Select
    // send test string
+   Serial.println(inputString);
    char arr[inputString.length()];
    inputString.toCharArray(arr, inputString.length());
    for (int i = 0; i < inputString.length(); i++) {
-      SPI.transfer (arr[i]);
+      SPI.transfer(arr[i]);
    }
    digitalWrite(SS, HIGH); // disable Slave Select
   }

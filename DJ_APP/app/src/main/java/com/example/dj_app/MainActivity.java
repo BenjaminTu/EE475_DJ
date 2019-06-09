@@ -168,10 +168,10 @@ public class MainActivity extends AppCompatActivity {
                 state = isChecked ? ON : OFF;
                 mode.setEnabled(isChecked);
                 if(mConnectedThread != null) {
-                    if(state == ON) { mConnectedThread.write ("SETMODE " +  setMode + "\0"); }
+                    if(state == ON) { mConnectedThread.write ("S " +  setMode + "\0"); }
                     else if (state == OFF) {
                         display[6] = 2;
-                        mConnectedThread.write("SETMODE " + 2 + "\0");
+                        mConnectedThread.write("S " + 2 + "\0");
                     }
                 }
             }
@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 setMode = isChecked ? AUTO : MAN;
                 display[6] = setMode;
-                if(mConnectedThread != null) { mConnectedThread.write("SETMODE " +  display[6] + "\0");}
+                if(mConnectedThread != null) { mConnectedThread.write("S " +  display[6] + "\0");}
             }
         });
 
