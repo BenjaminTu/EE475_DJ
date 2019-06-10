@@ -8,8 +8,8 @@
 #define JY_MSB      0x02
 #define JY_LSB      0x03
 
-#define SET_MODE    0x04
-#define MODE        0x09 // CHANGED THIS TO NOT CONFLICT WITH DANIEL'S RPi code (we
+#define SET_MODE    0x08
+#define MODE        0x09 // CHANGED THIS TO NOT CONFLICT WITH DANIEL'S RPi code
 
 #define SENSOR1_MSB 0x0A
 #define SENSOR1_MMB 0x0B
@@ -30,7 +30,7 @@
 #define MOTOR_L_SPEED 0x16
 #define MOTOR_R_SPEED 0x17
 
-#define REGISTERS   0x14
+#define REGISTERS   0x20
 
 unsigned char REG[REGISTERS] = {0};
 // END REGISTER DEFINITIONS
@@ -84,6 +84,8 @@ int processValueFromBuffer(char *buff, int startIndex);
 void processSerialString();
 void sendSerialTelemetry();
 void processSPI();
+void updateMove();
+void autoMode();
 
 void setJX(int newJX);
 void setJY(int newJY);

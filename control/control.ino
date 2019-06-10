@@ -15,13 +15,22 @@
  *    - Motors (for motor control)
  */
 
+#define DIR_FWD 3
+#define DIR_LEFT 2
+#define DIR_RIGHT 1
+
+int NS = 0;
+int PS = 0;
+
 void setup()
 {
   Serial.begin(9600);
   setupUART();
-  //setupI2C();
-  //setupSPI();
-  //setupPWM();
+  setupI2C();
+  setupSPI();
+  setupPWM();
+  REG[SET_MODE] = 0x02;
+  REG[MODE] = 0x02;
 }
 void setupUART()
 {
@@ -65,11 +74,15 @@ void loop()
   else if (REG[MODE] == 0x01) // AUTO
   {
     // TODO: Deal with this later
+    updateMove();
+    autoMode();
   }
   else if (REG[MODE] == 0x00) // MANUAL
   {
     joystickToMotors();
   }
+  
+  REG[MODE] = REG[SET_MODE];
   
   sendSerialTelemetry();
   checkWarning();
@@ -94,8 +107,7 @@ void setJY(int newJY)
 void setMode(int newMode)
 {
   REG[SET_MODE] = newMode;
-  // TODO: INHIBIT THIS FROM CHANGING IF REQ'd
-  REG[MODE] = newMode;
+
 }
 
 
@@ -243,9 +255,9 @@ void sendSerialTelemetry()
     Serial3.print(WARN_1);
     Serial3.print('\0');
     
-    //Serial.print("SE1 ");
-    //Serial.print(WARN_1);
-    //Serial.println('\0');
+    Serial.print("SE1 ");
+    Serial.print(WARN_1);
+    Serial.println('\0');
     WARN_1_CS = false;
   }
 
@@ -255,9 +267,9 @@ void sendSerialTelemetry()
     Serial3.print(WARN_2);
     Serial3.print('\0');
 
-    //Serial.print("SE2 ");
-    //Serial.print(WARN_2);
-    //Serial.println('\0');
+    Serial.print("SE2 ");
+    Serial.print(WARN_2);
+    Serial.println('\0');
     WARN_2_CS = false;
   }
 
@@ -268,22 +280,22 @@ void sendSerialTelemetry()
     Serial3.print('\0');
 
     
-    //Serial.print("SE4 ");
-    //Serial.print(WARN_3);
-    //Serial.println('\0');
+    Serial.print("SE4 ");
+    Serial.print(WARN_3);
+    Serial.println('\0');
     WARN_3_CS = false;
   }
 
   if (WARN_0_CS) 
   {
-    Serial3.print("SE4 ");
+    Serial3.print("XXX ");
     Serial3.print(WARN_0);
     Serial3.print('\0');
 
     
-    //Serial.print("SE4 ");
-    //Serial.print(WARN_0);
-    //Serial.println('\0');
+    Serial.print("XXX ");
+    Serial.print(WARN_0);
+    Serial.println('\0');
     WARN_0_CS = false;
   }
   
@@ -312,6 +324,39 @@ void serialEvent3()
       processSerialString();
     }
   }
+}
+
+
+void updateMove() 
+{
+    int nsRight = !WARN_2 | WARN_3;
+    int nsLeft = (!WARN_1 & (!WARN_3 | WARN_2)) | (WARN_2 & !WARN_3);
+    NS = nsRight | (nsLeft << 1);
+    PS = NS;         
+}
+
+void autoMode()
+{
+  int lb = 200 * ((NS & 0x03) == 0x02);
+  int lf = 200 * (NS & 0x01);
+  int rb = 200 * ((NS & 0x03) == 0x01);
+  int rf = 200 * ((NS & 0x02) >> 1);
+
+  Serial.print("LB: ");
+  Serial.println(lb);
+  Serial.print("LF: ");
+  Serial.println(lf);
+  Serial.print("RB: ");
+  Serial.println(rb);
+  Serial.print("RF: ");
+  Serial.println(rf);
+  Serial.println();
+  
+  analogWrite(LEFT_MOTOR_B, 0);
+  analogWrite(LEFT_MOTOR_F, lf);
+  analogWrite(RIGHT_MOTOR_B, 0);
+  analogWrite(RIGHT_MOTOR_F, rf);
+  
 }
 
 void joystickToMotors()
@@ -407,14 +452,14 @@ void joystickToMotors()
     rb = 0;
   }
   
-  Serial.print("LF: ");
-  Serial.println(lf);
-  Serial.print("RF: ");
-  Serial.println(rf);
-  Serial.print("LB: ");
-  Serial.println(lb);
-  Serial.print("RB: ");
-  Serial.println(rb);
+  //Serial.print("LF: ");
+  //Serial.println(lf);
+  //Serial.print("RF: ");
+  //Serial.println(rf);
+  //Serial.print("LB: ");
+  //Serial.println(lb);
+  //Serial.print("RB: ");
+  //Serial.println(rb);
 
   analogWrite(LEFT_MOTOR_B, lb);
   analogWrite(LEFT_MOTOR_F, lf);
