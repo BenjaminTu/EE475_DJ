@@ -390,12 +390,21 @@ void joystickToMotors()
     lb = fullSpeed;
     rb = (1 - (leftAngle/90.0)) * fullSpeed;
   } else if (x < 0 && y < 0) {
+    // third Quardent
     int fullSpeed = sqrt(pow(deltaX, 2) + pow(deltaY, 2));
     int rightAngle = atan2((double)(-1 * x), (double)(-1 * y)) * (180 / 3.14);
     lf = 0;
     rf = 0;
     lb = (1 - (rightAngle/90.0)) * fullSpeed;
     rb = fullSpeed;
+  } else if (x < 0 && y > 0) {
+    // second quardent
+    int fullSpeed = sqrt(pow(deltaX, 2) + pow(deltaY, 2));
+    int leftAngle = atan2((double)(-1 * x), (double)y) * (180 / 3.14);
+    lf = (1 - (leftAngle/90.0)) * fullSpeed;
+    rf = fullSpeed;
+    lb = 0;
+    rb = 0;
   }
   
   Serial.print("LF: ");
