@@ -337,18 +337,58 @@ void joystickToMotors()
     rf = 0;
   }*/
 
-  if (x > 0 && y > 0) {
+  if (x == 0 && y == 0){
+    // origin
+    lf = 0;
+    rf = 0;
+    lb = 0;
+    rb = 0;
+  } else if (y == 0 && x > 0) {
+    // full right
+    // maybe very hard to get here, observing
+    int fullSpeed = deltaX;
+    lf = fullSpeed;
+    rf = 0;
+    lb = 0;
+    rb = fullSpeed;
+  } else if (y == 0 && x < 0) {
+    // full left
+    // maybe also very hard to get there
+    int fullSpeed = -1 * deltaX;
+    lf = 0;
+    rf = fullSpeed;
+    lb = fullSpeed;
+    rb = 0;
+  } else if (y > 0 && x == 0) {
+    // full front
+    int fullSpeed = deltaY;
+    lf = fullSpeed;
+    rf = fullSpeed;
+    lb = 0;
+    rb = 0;
+  } else if (y < 0 && x == 0) {
+    // full backwards
+    int fullSpeed = -1 * deltaY;
+    lf = 0;
+    rf = 0;
+    lb = fullSpeed;
+    rb = fullSpeed;
+  } else if (x > 0 && y > 0) {
+    // first quardent
     int rightAngle = atan2((double)x, (double)y) * (180 / 3.14);
     int fullSpeed = sqrt(pow(deltaX, 2) + pow(deltaY, 2));
     lf = fullSpeed;
     rf = (1 - (rightAngle / 90.0)) * fullSpeed;
     lb = 0;
     rb = 0;
-  } else if (x == 0 && y == 0){
+  } else if (x > 0 && y < 0) {
+    // fourth quardent
+    int leftAngle = atan2((double)x, (double)(-1 * y)) * (180 / 3.14);
+    int fullSpeed = sqrt(pow(deltaX, 2) + pow(deltaY, 2));
     lf = 0;
     rf = 0;
-    lb = 0;
-    rb = 0;
+    lb = fullSpeed;
+    rb = (1 - (leftAngle/90.0)) * fullSpeed;
   }
   
   Serial.print("LF: ");
