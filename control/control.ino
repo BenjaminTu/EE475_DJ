@@ -533,7 +533,7 @@ void I2C_REQUEST()
   else if (I2C_ACTIVE_INDEX == MODE) 
   {
     Wire.write(REG[MODE]);
-  } 
+  }
 }
 
 // Print line

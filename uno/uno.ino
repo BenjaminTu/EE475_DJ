@@ -7,7 +7,7 @@ void sensorSetup(sensorID sense) {
 
 void setDistance(sensorID* sense, unsigned long distance) {
   sense->dist = distance;
-  sense-> warn = (distance < 15) ? YES : NO;
+  sense-> warn = (distance < 30) ? YES : NO;
 
   digitalWrite(sense->ID, sense->warn);
 }
