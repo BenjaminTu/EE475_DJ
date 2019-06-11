@@ -255,9 +255,9 @@ void sendSerialTelemetry()
     Serial3.print(WARN_1);
     Serial3.print('\0');
     
-    Serial.print("SE1 ");
-    Serial.print(WARN_1);
-    Serial.println('\0');
+    //Serial.print("SE1 ");
+    //Serial.print(WARN_1);
+    //Serial.println('\0');
     WARN_1_CS = false;
   }
 
@@ -267,9 +267,9 @@ void sendSerialTelemetry()
     Serial3.print(WARN_2);
     Serial3.print('\0');
 
-    Serial.print("SE2 ");
-    Serial.print(WARN_2);
-    Serial.println('\0');
+    //Serial.print("SE2 ");
+    //Serial.print(WARN_2);
+    //Serial.println('\0');
     WARN_2_CS = false;
   }
 
@@ -280,9 +280,9 @@ void sendSerialTelemetry()
     Serial3.print('\0');
 
     
-    Serial.print("SE4 ");
-    Serial.print(WARN_3);
-    Serial.println('\0');
+    //Serial.print("SE4 ");
+    //Serial.print(WARN_3);
+    //Serial.println('\0');
     WARN_3_CS = false;
   }
 
@@ -293,9 +293,9 @@ void sendSerialTelemetry()
     Serial3.print('\0');
 
     
-    Serial.print("XXX ");
-    Serial.print(WARN_0);
-    Serial.println('\0');
+    //Serial.print("XXX ");
+    //Serial.print(WARN_0);
+    //Serial.println('\0');
     WARN_0_CS = false;
   }
   
@@ -368,7 +368,6 @@ void joystickToMotors()
   int deltaX =  (x / 100.0 * MAX_SPEED);
   int deltaY = (y / 100.0 * MAX_SPEED);
 
-
   /*
   if (deltaY >= 0) {
     lf = deltaY + (deltaX+128);
@@ -381,8 +380,8 @@ void joystickToMotors()
     lf = 0;
     rf = 0;
   }*/
-
-  if (x == 0 && y == 0){
+  
+  if (abs(x) < 5 && abs(y) < 5){
     // origin
     lf = 0;
     rf = 0;
@@ -452,15 +451,7 @@ void joystickToMotors()
     rb = 0;
   }
   
-  //Serial.print("LF: ");
-  //Serial.println(lf);
-  //Serial.print("RF: ");
-  //Serial.println(rf);
-  //Serial.print("LB: ");
-  //Serial.println(lb);
-  //Serial.print("RB: ");
-  //Serial.println(rb);
-
+  
   analogWrite(LEFT_MOTOR_B, lb);
   analogWrite(LEFT_MOTOR_F, lf);
   analogWrite(RIGHT_MOTOR_B, rb);
