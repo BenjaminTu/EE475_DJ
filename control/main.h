@@ -1,110 +1,98 @@
-#include <Wire.h>
+#ifndef __MAIN_H__
+#define __MAIN_H__
 
-// direction
-#define OFF     0
-#define LEFT    1
-#define RIGHT   2
-#define FRONT   3
+// DEFINE REGISTERS
+#define JX_MSB      0x00
+#define JX_LSB      0x01
 
-// wheel
-#define FORWARD 1
-#define REVERSE -1
+#define JY_MSB      0x02
+#define JY_LSB      0x03
 
-// mode
-#define MODE_OFF  2
-#define AUTO      1
-#define MAN       0 
+#define SET_MODE    0x08
+#define MODE        0x09 // CHANGED THIS TO NOT CONFLICT WITH DANIEL'S RPi code
 
-// warning
-#define YES     1
-#define NO      0
+#define SENSOR1_MSB 0x0A
+#define SENSOR1_MMB 0x0B
+#define SENSOR1_LSB 0x0C
 
-// REG INDICES
+#define SENSOR2_MSB 0x0D
+#define SENSOR2_MMB 0x0E
+#define SENSOR2_LSB 0x0F
 
-// JOYSTICK X
-#define X_HH          0x0
-#define X_HL          0x1
-#define X_LH          0x2
-#define X_LL          0x3
+#define SENSOR3_MSB 0x10
+#define SENSOR3_MMB 0x11
+#define SENSOR3_LSB 0x12
 
-// JOYSTICK Y
-#define Y_HH          0x4
-#define Y_HL          0x5
-#define Y_LH          0x6
-#define Y_LL          0x7
+#define SENSOR4_MSB 0x13
+#define SENSOR4_MMB 0x14
+#define SENSOR4_LSB 0x15
 
-// MODES
-#define SET_MODE      0x8
-#define MODE          0x9
+#define MOTOR_L_SPEED 0x16
+#define MOTOR_R_SPEED 0x17
 
-//SENSOR 1
-#define SENSOR1_HH    0xA
-#define SENSOR1_HL    0xB
-#define SENSOR1_LH    0xC
-#define SENSOR1_LL    0xD
+#define REGISTERS   0x20
 
-// SENSOR 2
-#define SENSOR2_HH    0xE
-#define SENSOR2_HL    0xF
-#define SENSOR2_LH    0x10
-#define SENSOR2_LL    0x11
+unsigned char REG[REGISTERS] = {0};
+// END REGISTER DEFINITIONS
 
-// SENSOR 3
-#define SENSOR3_HH    0x12
-#define SENSOR3_HL    0x13
-#define SENSOR3_LH    0x14
-#define SENSOR3_LL    0x15
+// PIN DEFINITIONS
 
-// SENSOR 4
-#define SENSOR4_HH    0x16
-#define SENSOR4_HL    0x17
-#define SENSOR4_LH    0x18
-#define SENSOR4_LL    0x19
+#define LEFT_MOTOR_B  3
+#define LEFT_MOTOR_F  2
 
-// WHEEL 1
-#define WHEEL1_HH     0x1A
-#define WHEEL1_HL     0x1B
-#define WHEEL1_LH     0x1C
-#define WHEEL1_LL     0x1D
+#define RIGHT_MOTOR_B 5
+#define RIGHT_MOTOR_F 6
 
-// WHEEL 2
-#define WHEEL2_HH     0x1E
-#define WHEEL2_HL     0x1F
-#define WHEEL2_LH     0x20
-#define WHEEL2_LL     0x21
+#define PIN_WARNING_3 50 // SENSOR 3
+#define PIN_WARNING_2 51 // SENSOR 2
+#define PIN_WARNING_1 53 // SENSOR 1
 
-#define REPSONSE_FACTOR 0.5
+// END PIN DEFS
+
 #define MAX_SPEED 255
 
-int ps = OFF, ns = OFF;
-unsigned char REG[34] =  {0}; 
-int ACTIVE_INDEX;
+#define I2C_SLAVE_ADDR 0x62
 
-typedef struct{
-    int leftFPin;
-    int leftBPin;
-    int rightFPin;
-    int rightBPin;
-    int leftDir;
-    int rightDir;
-    int leftF;
-    int leftB;
-    int rightF;
-    int rightB;
-    int stat;
-  } control;
+#define SPI_BUFFER_WIDTH 50
 
-control wheels = (control) {2, 3, 4, 5, OFF, OFF, 0, 0, 0, 0, OFF};
+uint32_t SENSOR1_MOST_RECENT_READING;
+uint32_t SENSOR2_MOST_RECENT_READING;
+uint32_t SENSOR3_MOST_RECENT_READING;
+uint32_t SENSOR4_MOST_RECENT_READING;
 
-typedef struct {
-    int echoPin;
-    int triggerPin;
-    unsigned long dist;
-    int warn;
-    int ID;
-  } sensorID;
+char SPI_BUFFER[SPI_BUFFER_WIDTH] = {0};
+volatile boolean SPI_PROCESS;
+volatile byte SPI_BUFFER_INDEX;
 
-sensorID one = (sensorID) {13, 12, 0, NO, 1};
-sensorID two = (sensorID) {11, 10, 0, NO, 2};
-sensorID three = (sensorID) {9, 8, 0, NO, 3};
-sensorID four = (sensorID) {7, 6, 0, NO, 4};
+boolean WARN_3, WARN_2, WARN_1, WARN_0;
+boolean WARN_3_CS, WARN_2_CS, WARN_1_CS, WARN_0_CS;
+
+char I2C_ACTIVE_INDEX = 0x00;
+void I2C_RECEIVE(int QTY);
+void I2C_REQUEST();
+
+#define USART3_BAUDRATE 115200
+String CURRENT_UART_STRING;
+volatile boolean UART_PROCESS;
+
+void setupUART();
+void setupI2C();
+void setupSPI();
+void setupPWM();
+
+int processValueFromBuffer(char *buff, int startIndex);
+void processSerialString();
+void sendSerialTelemetry();
+void processSPI();
+void updateMove();
+void autoMode();
+
+void setJX(int newJX);
+void setJY(int newJY);
+
+void pl(char* string);
+void p(char* string);
+
+void setMotors(int left, int right);
+
+#endif
