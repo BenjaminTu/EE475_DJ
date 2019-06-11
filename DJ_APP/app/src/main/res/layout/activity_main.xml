@@ -18,6 +18,7 @@
         android:layout_marginBottom="8dp"
         android:text="@string/sensorInit"
         android:textColor="@color/warning"
+        android:visibility="invisible"
         android:gravity="center"
         android:textSize="20sp"
         app:layout_constraintBottom_toTopOf="@+id/joystickView"
@@ -39,6 +40,7 @@
         android:gravity="center"
         android:text="@string/sensorInit"
         android:textColor="@color/warning"
+        android:visibility="invisible"
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -57,6 +59,7 @@
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
         android:layout_marginBottom="8dp"
+        android:visibility="invisible"
         android:text="@string/sensorInit"
         android:textColor="@color/warning"
         android:textSize="20sp"
@@ -80,6 +83,7 @@
         android:gravity="center"
         android:text="@string/sensorInit"
         android:textColor="@color/warning"
+        android:visibility="invisible"
         android:textSize="20sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/joystickView"
@@ -193,6 +197,7 @@
             android:layout_marginRight="8dp"
             android:layout_marginBottom="16dp"
             android:contentDescription="@string/wheel"
+            android:visibility="invisible"
             android:layoutDirection="rtl"
             app:srcCompat="@drawable/bar" />
 
@@ -208,6 +213,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
             android:layout_marginRight="8dp"
+            android:visibility="invisible"
             android:layout_marginBottom="16dp"
             android:contentDescription="@string/wheel"
             app:srcCompat="@drawable/bar" />

@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static int[] display = new int[8];
     private static ArrayList<String> INDICES =
-            new ArrayList<>(Arrays.asList(new String [] {"SENSOR1", "SENSOR2", "SENSOR3", "SENSOR4", "WHEEL1", "WHEEL2", "SETMODE", "MODE"}));
+            new ArrayList<>(Arrays.asList(new String [] {"SE1", "SE2", "SE3", "SE4", "W1", "W2", "SETMODE", "MODE"}));
 
     private static int[] joystickVal = new int[2];
     private static final int X = 0;
@@ -279,17 +279,21 @@ public class MainActivity extends AppCompatActivity {
                         //bytes = mmInStream.available(); // how many bytes are ready to be read?
                         //byte[] buffer = new byte[bytes];  // buffer store for the stream
                         String str = new String(buffer);
-                        String[] packets = str.split(":");
+                        String[] packets = str.split("\0");
+                        System.out.println(packets);
                         for(int i = 0; i < packets.length; i++) {
                             String data = packets[i].trim().toUpperCase();
                             String split[] = data.split(" ");
+                            System.out.println(Arrays.toString(split));
 
                             if (split.length == 2 && Pattern.matches("[0-9]+", split[1])) {
                                 // if the packet can be broken into more than 2 part
-                                if (Pattern.matches("SENSOR[1234]", split[0])) {
+                                if (Pattern.matches("SE[1234]", split[0])) {
                                     int ind = INDICES.indexOf(split[0].toUpperCase());
                                     display[ind] = Integer.parseInt(split[1]);
-                                } else if (Pattern.matches("WHEEL[12]", split[0])) {
+                                    System.out.println(split[0].toUpperCase());
+                                    System.out.println(split[1]);
+                                } else if (Pattern.matches("W[12]", split[0])) {
                                     int ind = INDICES.indexOf(split[0].toUpperCase());
                                     display[ind] = Integer.parseInt(split[1]);
                                 }
